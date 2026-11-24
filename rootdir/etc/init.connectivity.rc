@@ -1,0 +1,54 @@
+#
+# Copyright (C) 2024-2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# MediaTek MT6631 / MT6635 Connectivity (Wi-Fi, Bluetooth, GNSS) init for TB311FU (poplar)
+
+on early-init
+    # Connectivity device node readiness
+    setprop persist.vendor.connsys.chipid 0x6768
+
+on post-fs-data
+    # WMT & Connectivity directories
+    mkdir /data/vendor/connsyslog 0775 system system
+    mkdir /data/vendor/connsyslog/wifi 0775 wifi wifi
+    mkdir /data/vendor/connsyslog/bt 0775 bluetooth bluetooth
+
+    # Wi-Fi configuration directories
+    mkdir /data/vendor/wifi 0770 wifi wifi
+    mkdir /data/vendor/wifi/wpa 0770 wifi wifi
+    mkdir /data/vendor/wifi/wpa/sockets 0770 wifi wifi
+
+    # GNSS / MNLD directories
+    mkdir /data/vendor/gps 0770 gps system
+
+on boot
+    # WMT connectivity loader & launcher permissions
+    chown system system /dev/stpwmt
+    chmod 0660 /dev/stpwmt
+    chown system system /dev/wmtdetect
+    chmod 0660 /dev/wmtdetect
+    chown wifi wifi /dev/wmtWifi
+    chmod 0660 /dev/wmtWifi
+    chown bluetooth bluetooth /dev/stpbt
+    chmod 0660 /dev/stpbt
+    chown gps gps /dev/stpgps
+    chmod 0660 /dev/stpgps
+    chmod 0660 /dev/gps_emi
+
+service wmt_loader /vendor/bin/wmt_loader
+    class core
+    user root
+    group root
+    oneshot
+
+service wmt_launcher /vendor/bin/wmt_launcher -p /vendor/firmware/
+    class core
+    user system
+    group system
+    oneshot
+
+on property:vendor.connsys.driver.ready=yes
+    start wmt_launcher
+    write /dev/wmtWifi 1

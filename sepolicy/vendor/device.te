@@ -1,0 +1,12 @@
+# Device-specific SELinux domain rules for Lenovo TB311FU (poplar)
+type wmtWifi_device, dev_type;
+type stpwmt_device, dev_type;
+type stpbt_device, dev_type;
+type stpgps_device, dev_type;
+type nvram_device, dev_type;
+type proinfo_device, dev_type;
+type seccfg_device, dev_type;
+type nvdata_device, dev_type;
+type nvcfg_device, dev_type;
+type protect_f_block_device, dev_type;
+type protect_s_block_device, dev_type;

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2024-2026 The LineageOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- Enable peak refresh rate toggle in Settings (60Hz / 90Hz) -->
+    <bool name="config_show_smooth_display">true</bool>
+    <bool name="config_support_CT_PA">false</bool>
+</resources>

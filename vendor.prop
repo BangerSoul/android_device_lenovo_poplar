@@ -1,0 +1,26 @@
+#
+# Copyright (C) 2024-2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Vendor Properties for Lenovo TB311FU (poplar / mt8786)
+
+# Platform & Hardware Identity
+ro.hardware=mt8786
+ro.board.platform=mt6768
+ro.vendor.display.dynamic_fps=1
+ro.vendor.mtk_flv_playback_support=1
+vendor.mtk_thumbnail_optimization=true
+
+# Audio Flinger Vendor Tuning
+vendor.af.threshold.src_and_effect_count=5
+vendor.af.pausewait.enable=false
+vendor.af.dynamic.sleeptime.enable=true
+
+# Backlight PWM Range (0..4095, hardware floor >= 48)
+persist.sys.brightness.max=4095
+
+# Graphics & Gralloc
+ro.hardware.egl=mali
+ro.hardware.vulkan=mali
+debug.hwui.renderer=skiavk

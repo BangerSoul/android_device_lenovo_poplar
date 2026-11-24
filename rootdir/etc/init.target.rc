@@ -1,0 +1,61 @@
+#
+# Copyright (C) 2024-2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Device-specific target init configuration for Lenovo TB311FU (poplar)
+
+on early-init
+    # Load Wi-Fi dependencies in strict symbol resolution order before wlan_drv_gen4m_6768.ko
+    insmod /vendor_dlkm/lib/modules/rfkill.ko
+    insmod /vendor_dlkm/lib/modules/libarc4.ko
+    insmod /vendor_dlkm/lib/modules/cfg80211.ko
+    insmod /vendor_dlkm/lib/modules/mac80211.ko
+
+on post-fs
+    # Mount Lenovo OEM customization partition permissions
+    wait /dev/block/by-name/lenovocust
+    restorecon_recursive /lenovocust
+    chown system system /lenovocust
+    chmod 0775 /lenovocust
+
+on post-fs-data
+    # Awinic AW883xx Quad-Speaker Smart PA calibration & DSP
+    chmod 0664 /sys/bus/i2c/drivers/aw883xx_smartpa/3-0034/cali_re
+    chmod 0664 /sys/bus/i2c/drivers/aw883xx_smartpa/3-0034/cali_f0
+    chown audioserver audio /sys/bus/platform/devices/mt6660-param.0/prop_params
+
+    mkdir /mnt/vendor/persist/factory 0775 system system
+    mkdir /mnt/vendor/persist/factory/audio 0775 system system
+    chown system system /mnt/vendor/persist/factory/audio/aw_cali.bin
+    chmod 0664 /mnt/vendor/persist/factory/audio/aw_cali.bin
+
+    # Camera ISP 4.0T dump & calibration directories
+    mkdir /data/vendor/flash 0771 root system
+    mkdir /data/vendor/shading 0771 root system
+    mkdir /data/vendor/shading_otp 0771 root system
+    mkdir /data/vendor/camera_dump 0771 root system
+    mkdir /data/vendor/dipdebug 0771 root system
+    mkdir /data/vendor/flicker 0771 root system
+
+    # Microtrust TEE (Beanpod) runtime directory
+    mkdir /data/vendor/thh 0775 system system
+
+on boot
+    # USB OTG host role toggle
+    chmod 0664 /sys/devices/platform/mt_usb/otgenable
+    chown system system /sys/devices/platform/mt_usb/otgenable
+
+    # Display backlight PWM (hardware floor >= 48 enforced by kernel pwm_bl.c)
+    chown system system /sys/class/leds/lcd-backlight/brightness
+    chmod 0664 /sys/class/leds/lcd-backlight/brightness
+
+    # Load MediaTek Wi-Fi, Bluetooth & GNSS kernel modules
+    insmod /vendor_dlkm/lib/modules/wlan_drv_gen4m_6768.ko
+    insmod /vendor_dlkm/lib/modules/bt_drv_connac1x.ko
+    insmod /vendor_dlkm/lib/modules/gps_drv_stp.ko
+    setprop vendor.all.modules.ready 1
+
+on property:sys.boot_completed=1
+    # Ensure Wi-Fi interface and dynamic FPS controller are ready
+    setprop vendor.display.dynamic_fps 1

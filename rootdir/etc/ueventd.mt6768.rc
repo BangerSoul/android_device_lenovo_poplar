@@ -1,0 +1,86 @@
+#
+# Copyright (C) 2024-2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ueventd permissions for Lenovo TB311FU (poplar / mt6768 / mt8786)
+
+# Block Partitions
+/dev/block/mmcblk0                                              0660    root    system
+/dev/block/mmcblk0boot0                                         0660    root    system
+/dev/block/mmcblk0boot1                                         0660    root    system
+/dev/block/mmcblk0rpmb                                          0660    root    system
+/dev/block/by-name/boot                                         0640    root    system
+/dev/block/by-name/vendor_boot                                  0640    root    system
+/dev/block/by-name/init_boot                                    0640    root    system
+/dev/block/by-name/seccfg                                       0660    root    system
+/dev/block/by-name/proinfo                                      0660    root    system
+/dev/block/by-name/nvram                                        0660    root    system
+/dev/block/by-name/para                                         0660    root    system
+/dev/block/by-name/logo                                         0660    root    system
+/dev/block/by-name/frp                                          0660    root    system
+/dev/block/by-name/boot_para                                    0640    root    system
+/dev/block/by-name/lenovoraw                                    0640    system  system
+
+# Connectivity (WMT, Wi-Fi, Bluetooth, GNSS)
+/dev/stpwmt                                                     0660    system  system
+/dev/wmtdetect                                                  0660    system  system
+/dev/fw_log_wmt                                                 0660    system  system
+/dev/stpbt                                                      0660    bluetooth bluetooth
+/dev/fw_log_bt                                                  0660    bluetooth bluetooth
+/dev/stpgps                                                     0660    gps     gps
+/dev/gps                                                        0660    gps     system
+/dev/fw_log_gps                                                 0660    gps     gps
+/dev/gps_emi                                                    0660    gps     gps
+/dev/wmtWifi                                                    0660    wifi    wifi
+/dev/fw_log_wifi                                                0660    wifi    wifi
+/dev/btif                                                       0600    system  system
+
+# Mali-G52 GPU & ION / DMA-BUF Heaps
+/dev/mali0                                                      0666    system  graphics
+/dev/ion                                                        0666    system  graphics
+/dev/dma_heap/mtk_mm                                            0444    system  system
+/dev/dma_heap/mtk_mm-uncached                                   0444    system  system
+/dev/dma_heap/mtk_svp_page-uncached                             0444    system  system
+/dev/dma_heap/mtk_prot_page-uncached                            0444    system  system
+/dev/dma_heap/mtk_svp_region                                    0444    system  system
+/dev/dma_heap/mtk_svp_region-aligned                            0444    system  system
+/dev/dma_heap/mtk_prot_region                                   0444    system  system
+/dev/dma_heap/mtk_prot_region-aligned                           0444    system  system
+
+# Display & MDP
+/dev/mt-mdp                                                     0660    system  media
+/dev/mtk_mdp                                                    0660    system  system
+/dev/mdp_sync                                                   0660    system  system
+/dev/mtk_cmdq                                                   0640    system  system
+/dev/mtk_disp                                                   0444    system  graphics
+/dev/mtk_dfrc                                                   0660    system  graphics
+
+# Camera ISP 4.0T
+/dev/camera-sysram                                              0660    system  camera
+/dev/camera-mem                                                 0660    system  camera
+/dev/camera-isp                                                 0660    system  camera
+/dev/camera-dip                                                 0660    system  camera
+/dev/camera-dpe                                                 0660    system  camera
+/dev/camera-fdvt                                                0660    system  camera
+/dev/camera-pipemgr                                             0660    system  camera
+/dev/kd_camera_hw                                               0660    system  camera
+/dev/seninf                                                     0660    system  camera
+/dev/ccu                                                        0660    system  camera
+/dev/video*                                                     0660    media   system
+/dev/media*                                                     0660    camera  system
+/dev/v4l-subdev*                                                0660    camera  system
+
+# Audio & Video Codec
+/dev/audio_ipi                                                  0640    media   media
+/dev/audio_scp                                                  0640    media   media
+/dev/offloadservice                                             0640    media   media
+/dev/vcu                                                        0660    media   system
+
+# Sensors, SCP & TEE
+/dev/scp                                                        0440    root    system
+/dev/sspm                                                       0440    root    system
+/dev/gz_kree                                                    0660    system  system
+/dev/touch                                                      0660    root    system
+/dev/alarm                                                      0660    root    system
+/dev/bus/usb/*                                                  0660    root    usb

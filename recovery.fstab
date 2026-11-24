@@ -1,0 +1,50 @@
+# Android Recovery fstab for Lenovo Tab M9 / M11 (TB311FU / poplar)
+# Recovery is embedded in vendor_boot.img (Vendor Ramdisk Entry 1, type=2)
+# Dynamic partitions reside in 11.00 GiB super (EROFS + Ext4 fallback)
+
+#<src>                                          <mnt_point>            <type> <mnt_flags and options>                                                                                                   <fs_mgr_flags>
+system                                          /system                erofs  ro                                                                                                                 wait,slotselect,avb=vbmeta_system,logical,first_stage_mount
+system                                          /system                ext4   ro                                                                                                                 wait,slotselect,avb=vbmeta_system,logical,first_stage_mount
+system_ext                                      /system_ext            erofs  ro                                                                                                                 wait,slotselect,avb=vbmeta_system,logical,first_stage_mount
+system_ext                                      /system_ext            ext4   ro                                                                                                                 wait,slotselect,avb=vbmeta_system,logical,first_stage_mount
+vendor                                          /vendor                erofs  ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+vendor                                          /vendor                ext4   ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+product                                         /product               erofs  ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+product                                         /product               ext4   ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+vendor_dlkm                                     /vendor_dlkm           erofs  ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+vendor_dlkm                                     /vendor_dlkm           ext4   ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+system_dlkm                                     /system_dlkm           erofs  ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+system_dlkm                                     /system_dlkm           ext4   ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+odm_dlkm                                        /odm_dlkm              erofs  ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+odm_dlkm                                        /odm_dlkm              ext4   ro                                                                                                                 wait,slotselect,avb,logical,first_stage_mount
+
+# Metadata & Encrypted Userdata
+/dev/block/by-name/md_udc                       /metadata              ext4   noatime,nosuid,nodev,discard                                                                                       wait,check,formattable,first_stage_mount
+/dev/block/by-name/userdata                     /data                  f2fs   noatime,nosuid,nodev,discard,noflush_merge,fsync_mode=nobarrier,reserve_root=134217,resgid=1065,inlinecrypt          wait,check,formattable,quota,latemount,resize,readahead_size_kb=512,reservedsize=128m,checkpoint=fs,fileencryption=aes-256-xts:aes-256-cts:v2,keydirectory=/metadata/vold/metadata_encryption
+
+# Persistent & Calibration Partitions (Protected - Never Wipe)
+/dev/block/by-name/protect1                     /mnt/vendor/protect_f  ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                                                             wait,check,formattable
+/dev/block/by-name/protect2                     /mnt/vendor/protect_s  ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                                                             wait,check,formattable
+/dev/block/by-name/nvdata                       /mnt/vendor/nvdata     ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                                                             wait,check,formattable
+/dev/block/by-name/nvcfg                        /mnt/vendor/nvcfg      ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                                                             wait,check,formattable
+/dev/block/by-name/persist                      /mnt/vendor/persist    ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                                                             wait,check,formattable
+/dev/block/by-name/lenovocust                   /lenovocust            ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc                                                             wait,check,formattable
+
+# External Storage & USB OTG
+/devices/platform/11240000.mmc*                 auto                   auto   defaults                                                                                                           voldmanaged=sdcard1:auto,encryptable=userdata
+/devices/platform/mt_usb*                       auto                   vfat   defaults                                                                                                           voldmanaged=usbotg:auto
+
+# Physical Boot, Firmware & Control Partitions (Boot v4 Trinity - No Physical Recovery Partition)
+/dev/block/by-name/misc                         /misc                  emmc   defaults                                                                                                           defaults
+/dev/block/by-name/para                         /para                  emmc   defaults                                                                                                           defaults
+/dev/block/by-name/frp                          /persistent            emmc   defaults                                                                                                           defaults
+/dev/block/by-name/nvram                        /nvram                 emmc   defaults                                                                                                           defaults
+/dev/block/by-name/proinfo                      /proinfo               emmc   defaults                                                                                                           defaults
+/dev/block/by-name/boot_a                       /boot                  emmc   defaults                                                                                                           first_stage_mount,nofail
+/dev/block/by-name/vendor_boot_a                /vendor_boot           emmc   defaults                                                                                                           defaults
+/dev/block/by-name/init_boot_a                  /init_boot             emmc   defaults                                                                                                           defaults
+/dev/block/by-name/dtbo_a                       /dtbo                  emmc   defaults                                                                                                           defaults
+/dev/block/by-name/vbmeta_a                     /vbmeta                emmc   defaults                                                                                                           defaults
+/dev/block/by-name/vbmeta_system_a              /vbmeta_system         emmc   defaults                                                                                                           defaults
+/dev/block/by-name/vbmeta_vendor_a              /vbmeta_vendor         emmc   defaults                                                                                                           defaults
+/dev/block/by-name/super                        /super                 emmc   defaults                                                                                                           defaults
