@@ -47,9 +47,10 @@ ifneq ($(wildcard kernel/lenovo/poplar/Makefile),)
 else
     TARGET_NO_KERNEL := false
     TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.gz
-    ifneq ($(wildcard $(DEVICE_PATH)/prebuilt/dtbo.img),)
-        BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbo.img
-    endif
+endif
+
+ifneq ($(wildcard $(DEVICE_PATH)/prebuilt/dtbo.img),)
+    BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbo.img
 endif
 
 BOARD_KERNEL_PAGESIZE := 4096
@@ -79,7 +80,6 @@ AB_OTA_PARTITIONS += \
     boot \
     init_boot \
     vendor_boot \
-    dtbo \
     vbmeta \
     vbmeta_system \
     vbmeta_vendor \
@@ -90,6 +90,10 @@ AB_OTA_PARTITIONS += \
     vendor_dlkm \
     system_dlkm \
     odm_dlkm
+
+ifneq ($(wildcard $(DEVICE_PATH)/prebuilt/dtbo.img),)
+    AB_OTA_PARTITIONS += dtbo
+endif
 
 BOARD_USES_METADATA_PARTITION := true
 BOARD_SUPER_PARTITION_SIZE := 11811160064
