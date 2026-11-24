@@ -35,12 +35,22 @@ TARGET_SCREEN_HEIGHT := 1920
 TARGET_USES_VULKAN := true
 
 # Kernel (Linux 6.6 GKI 2.0, 4K Page Size, Boot Header v4)
-TARGET_KERNEL_SOURCE := kernel/lenovo/poplar
-TARGET_KERNEL_CONFIG := tb311fu_defconfig
 TARGET_KERNEL_ARCH := arm64
 TARGET_KERNEL_HEADER_ARCH := arm64
-TARGET_KERNEL_CLANG_COMPILE := true
 BOARD_KERNEL_IMAGE_NAME := Image.gz
+
+# Build kernel from source if full kernel tree is present; otherwise fall back to prebuilt GKI kernel
+ifneq ($(wildcard kernel/lenovo/poplar/Makefile),)
+    TARGET_KERNEL_SOURCE := kernel/lenovo/poplar
+    TARGET_KERNEL_CONFIG := tb311fu_defconfig
+    TARGET_KERNEL_CLANG_COMPILE := true
+else
+    TARGET_NO_KERNEL := false
+    TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.gz
+    ifneq ($(wildcard $(DEVICE_PATH)/prebuilt/dtbo.img),)
+        BOARD_PREBUILT_DTBOIMAGE := $(DEVICE_PATH)/prebuilt/dtbo.img
+    endif
+endif
 
 BOARD_KERNEL_PAGESIZE := 4096
 BOARD_KERNEL_BASE := 0x40078000

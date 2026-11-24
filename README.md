@@ -69,7 +69,10 @@ The device implements **Virtual A/B (VAB)** with an **11.00 GiB** physical `supe
 
 1. Initialize and sync the LineageOS workspace using `.repo/local_manifests/poplar.xml`.
 2. Verify `vendor/lenovo/poplar` and `kernel/lenovo/poplar` are synced alongside `device/lenovo/poplar`.
-3. Build LineageOS:
+3. Choose either **inline kernel compilation** or **prebuilt GKI kernel fallback** (handled automatically by `BoardConfig.mk` via `$(wildcard kernel/lenovo/poplar/Makefile)`):
+   - **Inline kernel source**: Extract the Lenovo GPL `kernel-6.6` archive or clone `kernel_lenovo_TB311FU` into `kernel/lenovo/poplar/` (with `tb311fu_defconfig` and patches applied). `BoardConfig.mk` detects `kernel/lenovo/poplar/Makefile` and sets `TARGET_KERNEL_SOURCE := kernel/lenovo/poplar` + `TARGET_KERNEL_CONFIG := tb311fu_defconfig`.
+   - **Prebuilt GKI kernel fallback**: When `kernel/lenovo/poplar/` only contains config/patches/tools (no `Makefile`), `BoardConfig.mk` falls back to `TARGET_PREBUILT_KERNEL := device/lenovo/poplar/prebuilt/Image.gz` (stage a standalone-compiled `Image.gz` or unpack stock `boot.img` via `python3 kernel/lenovo/poplar/tools/assemble_boot_vector.py --unpack boot.img`, and optionally stage `device/lenovo/poplar/prebuilt/dtbo.img`).
+4. Build LineageOS:
 
 ```bash
 source build/envsetup.sh
