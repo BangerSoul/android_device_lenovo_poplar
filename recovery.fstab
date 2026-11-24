@@ -1,4 +1,4 @@
-# Android Recovery fstab for Lenovo Tab M9 / M11 (TB311FU / poplar)
+# Android Recovery fstab for Lenovo Tab (TB311FU / poplar)
 # Recovery is embedded in vendor_boot.img (Vendor Ramdisk Entry 1, type=2)
 # Dynamic partitions reside in 11.00 GiB super (EROFS + Ext4 fallback)
 
@@ -40,11 +40,11 @@ odm_dlkm                                        /odm_dlkm              ext4   ro
 /dev/block/by-name/frp                          /persistent            emmc   defaults                                                                                                           defaults
 /dev/block/by-name/nvram                        /nvram                 emmc   defaults                                                                                                           defaults
 /dev/block/by-name/proinfo                      /proinfo               emmc   defaults                                                                                                           defaults
-/dev/block/by-name/boot_a                       /boot                  emmc   defaults                                                                                                           first_stage_mount,nofail
-/dev/block/by-name/vendor_boot_a                /vendor_boot           emmc   defaults                                                                                                           defaults
-/dev/block/by-name/init_boot_a                  /init_boot             emmc   defaults                                                                                                           defaults
-/dev/block/by-name/dtbo_a                       /dtbo                  emmc   defaults                                                                                                           defaults
-/dev/block/by-name/vbmeta_a                     /vbmeta                emmc   defaults                                                                                                           defaults
-/dev/block/by-name/vbmeta_system_a              /vbmeta_system         emmc   defaults                                                                                                           defaults
-/dev/block/by-name/vbmeta_vendor_a              /vbmeta_vendor         emmc   defaults                                                                                                           defaults
+/dev/block/by-name/boot                         /boot                  emmc   defaults                                                                                                           first_stage_mount,nofail,slotselect
+/dev/block/by-name/vendor_boot                  /vendor_boot           emmc   defaults                                                                                                           slotselect
+/dev/block/by-name/init_boot                    /init_boot             emmc   defaults                                                                                                           slotselect
+/dev/block/by-name/dtbo                         /dtbo                  emmc   defaults                                                                                                           slotselect
+/dev/block/by-name/vbmeta                       /vbmeta                emmc   defaults                                                                                                           slotselect
+/dev/block/by-name/vbmeta_system                /vbmeta_system         emmc   defaults                                                                                                           slotselect
+/dev/block/by-name/vbmeta_vendor                /vbmeta_vendor         emmc   defaults                                                                                                           slotselect
 /dev/block/by-name/super                        /super                 emmc   defaults                                                                                                           defaults

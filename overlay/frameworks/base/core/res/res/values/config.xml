@@ -4,9 +4,9 @@
      SPDX-License-Identifier: Apache-2.0
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- Display & Refresh Rate (1200x1920 WUXGA IPS LCD, 60/90Hz Dynamic FPS) -->
+    <!-- Display & Refresh Rate (10.1" 1200x1920 WUXGA IPS LCD, 60Hz) -->
     <integer name="config_defaultRefreshRate">60</integer>
-    <integer name="config_defaultPeakRefreshRate">90</integer>
+    <integer name="config_defaultPeakRefreshRate">60</integer>
     <bool name="config_useDevInputEventForAudioJack">true</bool>
 
     <!-- Backlight PWM Brightness (12-bit 0..4095 in kernel, clamped >= 48 in pwm_bl.c) -->
@@ -17,7 +17,7 @@
     <integer name="config_screenBrightnessDoze">48</integer>
     <bool name="config_automatic_brightness_available">true</bool>
 
-    <!-- Quad Speaker & Audio Capabilities -->
+    <!-- Dual Stereo Speaker & Audio Capabilities (MTK_AUDIO_NUMBER_OF_SPEAKER=2) -->
     <bool name="config_supportAudioSourceUnprocessed">true</bool>
     <bool name="config_safe_media_volume_enabled">true</bool>
 
@@ -28,7 +28,7 @@
     <integer name="config_lidKeyboardAccessibility">0</integer>
     <integer name="config_lidNavigationAccessibility">0</integer>
 
-    <!-- Power Management & Doze (7040 mAh Li-Po) -->
+    <!-- Power Management & Doze (5100 mAh Li-Po) -->
     <bool name="config_enableAutoPowerModes">true</bool>
     <bool name="config_powerDecoupleAutoSuspendModeFromDisplay">false</bool>
     <bool name="config_powerDecoupleInteractiveModeFromDisplay">false</bool>

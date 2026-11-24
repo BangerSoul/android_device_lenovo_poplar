@@ -1,4 +1,4 @@
-# Android fstab for Lenovo Tab M9 / M11 (TB311FU / poplar / mt6768)
+# Android fstab for Lenovo Tab (TB311FU / poplar / mt6768)
 # Dynamic Virtual A/B partitions inside super (EROFS + Ext4 fallback)
 
 #<src>                                          <mnt_point>            <type> <mnt_flags and options>                                                                                                   <fs_mgr_flags>

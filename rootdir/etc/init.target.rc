@@ -20,7 +20,7 @@ on post-fs
     chmod 0775 /lenovocust
 
 on post-fs-data
-    # Awinic AW883xx Quad-Speaker Smart PA calibration & DSP
+    # Awinic AW883xx Dual Stereo Speaker Smart PA calibration & DSP
     chmod 0664 /sys/bus/i2c/drivers/aw883xx_smartpa/3-0034/cali_re
     chmod 0664 /sys/bus/i2c/drivers/aw883xx_smartpa/3-0034/cali_f0
     chown audioserver audio /sys/bus/platform/devices/mt6660-param.0/prop_params

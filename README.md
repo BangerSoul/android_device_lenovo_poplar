@@ -1,6 +1,6 @@
-# LineageOS Device Tree for Lenovo Tab M9 / Tab M11 (`poplar` / `TB311FU`)
+# LineageOS Device Tree for Lenovo Tab (`poplar` / `TB311FU`)
 
-Device configuration for building **LineageOS** (`lineage-21.0` / `lineage-22.1`) for the **Lenovo Tab M9 / Tab M11** (`TB311FU`), internal codename `poplar` (`poplar_row_wifi`), built on the MediaTek Helio G85 (`MT8786` / `MT6768`) platform.
+Device configuration for building **LineageOS** (`lineage-21.0` / `lineage-22.1`) for the **Lenovo Tab** (`TB311FU`), internal codename `poplar` (`poplar_row_wifi`), built on the MediaTek Helio G85 (`MT8786` / `MT6768`) platform.
 
 ---
 
@@ -8,13 +8,15 @@ Device configuration for building **LineageOS** (`lineage-21.0` / `lineage-22.1`
 
 | Component | Specification |
 |---|---|
-| **Commercial Model** | Lenovo TB311FU (Tab M9 / Tab M11 Wi-Fi) |
+| **Commercial Model** | Lenovo TB311FU (`ro.config.lgsi.market_name=Lenovo Tab`) |
 | **Codename** | `poplar` (`poplar_row_wifi`) |
 | **Board / Platform** | `tb8786p1_64_k66` / `mt6768` (`tc422` base) |
 | **SoC** | MediaTek MT8786 / Helio G85 (2x ARM Cortex-A75 @ 2.0 GHz + 6x ARM Cortex-A55 @ 1.8 GHz) |
 | **GPU** | ARM Mali-G52 2EEMC2 @ 950 MHz (Vulkan + OpenGL ES 3.2) |
 | **Userspace ABI & IPC** | Pure 64-bit (`arm64-v8a` primary, `armeabi-v7a` secondary) + 64-bit Binder IPC |
-| **Display** | 1200 x 1920 WUXGA IPS LCD (60/90 Hz dynamic FPS, PWM backlight floor >= 48) |
+| **Display** | 10.1" 1200 x 1920 WUXGA IPS LCD (60 Hz, PWM backlight floor >= 48) |
+| **Audio** | Dual stereo speakers (`MTK_AUDIO_NUMBER_OF_SPEAKER=2`), Awinic Smart PA (`aw883xx`) |
+| **Battery** | 5,100 mAh Li-Po (15W USB-C charging) |
 | **Kernel** | Linux 6.6.82 GKI 2.0 (`tb311fu_defconfig`, 4096-byte page size) |
 | **Stock Firmware Baseline** | `TB311FU_ROW_OPEN_USER_M1457.5_W_ZUI_17.5.36.508_ST_261024` |
 

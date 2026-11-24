@@ -12,7 +12,7 @@ PRODUCT_SOONG_NAMESPACES += \
 DEVICE_PACKAGE_OVERLAYS += \
     $(LOCAL_PATH)/overlay
 
-# Screen & Tablet Characteristics (1200x1920 WUXGA IPS 11", ~207 ppi)
+# Screen & Tablet Characteristics (10.1" 1200x1920 WUXGA IPS LCD, ~224 ppi, 60Hz)
 PRODUCT_AAPT_CONFIG := normal large xlarge
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
 PRODUCT_CHARACTERISTICS := tablet
@@ -63,8 +63,6 @@ PRODUCT_COPY_FILES += \
 
 # Hardware Abstraction Layers & System Packages
 PRODUCT_PACKAGES += \
-    android.hardware.audio.service \
-    android.hardware.audio@7.1-impl \
     audio.bluetooth.default \
     audio.r_submix.default \
     audio.usb.default \
@@ -76,7 +74,6 @@ PRODUCT_PACKAGES += \
     fastbootd \
     android.hardware.gatekeeper@1.0-impl \
     android.hardware.gatekeeper@1.0-service \
-    android.hardware.graphics.composer@2.1-impl \
     libvulkan \
     android.hardware.health-service.example \
     android.hardware.health-service.example_recovery \

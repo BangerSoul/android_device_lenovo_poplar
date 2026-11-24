@@ -4,7 +4,7 @@
      SPDX-License-Identifier: Apache-2.0
 -->
 <resources>
-    <!-- Enable peak refresh rate toggle in Settings (60Hz / 90Hz) -->
-    <bool name="config_show_smooth_display">true</bool>
+    <!-- TB311FU uses a 60Hz IPS panel (90Hz smooth display belongs to TB330FU) -->
+    <bool name="config_show_smooth_display">false</bool>
     <bool name="config_support_CT_PA">false</bool>
 </resources>
