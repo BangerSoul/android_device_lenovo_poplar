@@ -1,0 +1,14 @@
+# OS & Editor Artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+*.rej
+
+# Python & Local Tooling Cache
+__pycache__/
+*.py[cod]
+*$py.class

@@ -65,13 +65,39 @@ The device implements **Virtual A/B (VAB)** with an **11.00 GiB** physical `supe
 
 ---
 
+## Related Repositories
+
+| Path | Repository | Branch | Description |
+|---|---|---|---|
+| `device/lenovo/poplar` | [`BangerSoul/android_device_lenovo_poplar`](https://github.com/BangerSoul/android_device_lenovo_poplar) | `lineage-21.0` | LineageOS device tree, `BoardConfig.mk`, fstabs, init scripts, overlays, Boot v4 embedded recovery |
+| `vendor/lenovo/poplar` | [`BangerSoul/proprietary_vendor_lenovo_poplar`](https://github.com/BangerSoul/proprietary_vendor_lenovo_poplar) | `lineage-21.0` | Proprietary vendor blobs & DLKMs extracted from stock ZUI `17.5.36.508` |
+| `kernel/lenovo/poplar` | [`BangerSoul/android_kernel_lenovo_poplar`](https://github.com/BangerSoul/android_kernel_lenovo_poplar) | `lineage-21.0` | Linux 6.6.82 GKI 2.0 `tb311fu_defconfig`, hardware patches, and LK boot vector tool |
+| `.repo/local_manifests` | [`BangerSoul/local_manifests_poplar`](https://github.com/BangerSoul/local_manifests_poplar) | `lineage-21.0` | Android `repo` local manifest (`poplar.xml`) and build tree wiring |
+
+---
+
 ## Build Instructions
 
-1. Initialize and sync the LineageOS workspace using `.repo/local_manifests/poplar.xml`.
+1. Initialize the LineageOS workspace and clone [`BangerSoul/local_manifests_poplar`](https://github.com/BangerSoul/local_manifests_poplar) into `.repo/local_manifests`:
+
+```bash
+repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --git-lfs
+git clone https://github.com/BangerSoul/local_manifests_poplar.git -b lineage-21.0 .repo/local_manifests
+repo sync -c -j$(nproc) --force-sync --no-clone-bundle --no-tags
+```
+
+   Alternatively, clone the three device-specific trees directly into an existing LineageOS checkout:
+
+```bash
+git clone https://github.com/BangerSoul/android_device_lenovo_poplar.git -b lineage-21.0 device/lenovo/poplar
+git clone https://github.com/BangerSoul/proprietary_vendor_lenovo_poplar.git -b lineage-21.0 vendor/lenovo/poplar
+git clone https://github.com/BangerSoul/android_kernel_lenovo_poplar.git -b lineage-21.0 kernel/lenovo/poplar
+```
+
 2. Verify `vendor/lenovo/poplar` and `kernel/lenovo/poplar` are synced alongside `device/lenovo/poplar`.
 3. Choose either **inline kernel compilation** or **prebuilt GKI kernel fallback** (handled automatically by `BoardConfig.mk` via `$(wildcard kernel/lenovo/poplar/Makefile)`):
-   - **Inline kernel source**: Extract the Lenovo GPL `kernel-6.6` archive or clone `kernel_lenovo_TB311FU` into `kernel/lenovo/poplar/` (with `tb311fu_defconfig` and patches applied). `BoardConfig.mk` detects `kernel/lenovo/poplar/Makefile` and sets `TARGET_KERNEL_SOURCE := kernel/lenovo/poplar` + `TARGET_KERNEL_CONFIG := tb311fu_defconfig`.
-   - **Prebuilt GKI kernel fallback**: When `kernel/lenovo/poplar/` only contains config/patches/tools (no `Makefile`), `BoardConfig.mk` falls back to `TARGET_PREBUILT_KERNEL := device/lenovo/poplar/prebuilt/Image.gz` (stage a standalone-compiled `Image.gz` or unpack stock `boot.img` via `python3 kernel/lenovo/poplar/tools/assemble_boot_vector.py --unpack boot.img`). Optionally stage `device/lenovo/poplar/prebuilt/dtbo.img` (copied from stock `dtbo.img`); `BoardConfig.mk` only sets `BOARD_PREBUILT_DTBOIMAGE` and adds `dtbo` to `AB_OTA_PARTITIONS` when `prebuilt/dtbo.img` is present, so omitting it keeps `m bacon` OTA packaging safe.
+   - **Inline kernel source**: Extract the Lenovo GPL `kernel-6.6` archive (or upstream `kernel_lenovo_TB311FU` source) into `kernel/lenovo/poplar/` with `tb311fu_defconfig` and patches applied. `BoardConfig.mk` detects `kernel/lenovo/poplar/Makefile` and sets `TARGET_KERNEL_SOURCE := kernel/lenovo/poplar` + `TARGET_KERNEL_CONFIG := tb311fu_defconfig`.
+   - **Prebuilt GKI kernel fallback**: When `kernel/lenovo/poplar/` tracks only defconfig/patches/tools (no `Makefile`), `BoardConfig.mk` falls back to `TARGET_PREBUILT_KERNEL := device/lenovo/poplar/prebuilt/Image.gz` (stage a standalone-compiled `Image.gz` or unpack stock `boot.img` via `python3 kernel/lenovo/poplar/tools/assemble_boot_vector.py --unpack boot.img`). Optionally stage `device/lenovo/poplar/prebuilt/dtbo.img` (copied from stock `dtbo.img`); `BoardConfig.mk` only sets `BOARD_PREBUILT_DTBOIMAGE` and adds `dtbo` to `AB_OTA_PARTITIONS` when `prebuilt/dtbo.img` is present, so omitting it keeps `m bacon` OTA packaging safe.
 4. Build LineageOS:
 
 ```bash
@@ -125,7 +151,8 @@ Alternatively, sideload the compiled LineageOS OTA zip (`lineage-*.zip`) from Li
 
 ## Repository & GitHub Publishing
 
-- **Remote (`origin`)**: `https://github.com/iamsh/android_device_lenovo_poplar.git`
+- **Repository**: [BangerSoul/android_device_lenovo_poplar](https://github.com/BangerSoul/android_device_lenovo_poplar)
+- **Remote (`origin`)**: `https://github.com/BangerSoul/android_device_lenovo_poplar.git`
 - **Target Branch**: `lineage-21.0`
 
 ```bash
