@@ -46,6 +46,7 @@ ifneq ($(wildcard kernel/lenovo/poplar/Makefile),)
     TARGET_KERNEL_CLANG_COMPILE := true
 else
     TARGET_NO_KERNEL := false
+    TARGET_KERNEL_SOURCE := $(DEVICE_PATH)/no_kernel_src
     TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/Image.gz
 endif
 
