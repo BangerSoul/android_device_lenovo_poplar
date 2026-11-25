@@ -36,9 +36,6 @@
     <!-- Wi-Fi Only Tablet (No Cellular / Telephony Radio) -->
     <bool name="config_voice_capable">false</bool>
     <bool name="config_sms_capable">false</bool>
-    <bool name="config_wifi_dual_band_support">true</bool>
-    <bool name="config_wifi_background_scan_support">true</bool>
-    <bool name="config_bluetooth_le_peripheral_mode_supported">true</bool>
 
     <!-- Network Attributes (Wi-Fi, Bluetooth, Ethernet) -->
     <string-array translatable="false" name="networkAttributes">

@@ -101,5 +101,5 @@
     <sepolicy>
         <version>202404</version>
     </sepolicy>
-    <kernel target-level="6"/>
+    <kernel target-level="202404"/>
 </manifest>

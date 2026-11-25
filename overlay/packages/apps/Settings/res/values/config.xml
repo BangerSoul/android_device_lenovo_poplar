@@ -6,5 +6,4 @@
 <resources>
     <!-- TB311FU uses a 60Hz IPS panel (90Hz smooth display belongs to TB330FU) -->
     <bool name="config_show_smooth_display">false</bool>
-    <bool name="config_support_CT_PA">false</bool>
 </resources>

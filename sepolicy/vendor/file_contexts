@@ -7,23 +7,9 @@
 /dev/block/by-name/init_boot_b          u:object_r:boot_block_device:s0
 /dev/block/by-name/dtbo_a               u:object_r:dtbo_block_device:s0
 /dev/block/by-name/dtbo_b               u:object_r:dtbo_block_device:s0
-/dev/block/by-name/md_udc               u:object_r:metadata_block_device:s0
-/dev/block/by-name/userdata             u:object_r:userdata_block_device:s0
-/dev/block/by-name/misc                 u:object_r:misc_block_device:s0
-/dev/block/by-name/frp                  u:object_r:frp_block_device:s0
-/dev/block/by-name/super                u:object_r:super_block_device:s0
-/dev/block/by-name/nvram                u:object_r:nvram_device:s0
-/dev/block/by-name/proinfo              u:object_r:proinfo_device:s0
-/dev/block/by-name/seccfg               u:object_r:seccfg_device:s0
-/dev/block/by-name/nvdata               u:object_r:nvdata_device:s0
-/dev/block/by-name/nvcfg                u:object_r:nvcfg_device:s0
-/dev/block/by-name/persist              u:object_r:persist_block_device:s0
-/dev/block/by-name/protect1             u:object_r:protect_f_block_device:s0
-/dev/block/by-name/protect2             u:object_r:protect_s_block_device:s0
 
 # Connectivity & Smart PA
 /dev/wmtWifi                            u:object_r:wmtWifi_device:s0
 /dev/stpwmt                             u:object_r:stpwmt_device:s0
 /dev/stpbt                              u:object_r:stpbt_device:s0
-/dev/stpgps                             u:object_r:stpgps_device:s0
 /mnt/vendor/persist/factory/audio(/.*)? u:object_r:mnt_vendor_file:s0

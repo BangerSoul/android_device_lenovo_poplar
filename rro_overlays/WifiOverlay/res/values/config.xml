@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2024-2026 The LineageOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <bool name="config_wifi5ghzSupport">true</bool>
+    <bool name="config_wifi_background_scan_support">true</bool>
+</resources>

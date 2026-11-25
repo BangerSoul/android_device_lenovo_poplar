@@ -21,13 +21,11 @@ TARGET_2ND_CPU_ABI2 := armeabi
 TARGET_2ND_CPU_VARIANT := generic
 TARGET_2ND_CPU_VARIANT_RUNTIME := cortex-a55
 
-# 64-bit Android Binder IPC
-TARGET_USES_64_BIT_BINDER := true
-
 # Platform / Bootloader
 TARGET_BOARD_PLATFORM := mt6768
 TARGET_BOOTLOADER_BOARD_NAME := tb8786p1_64_k66
 TARGET_NO_BOOTLOADER := true
+BOARD_HAS_MTK_HARDWARE := true
 
 # Display
 TARGET_SCREEN_WIDTH := 1200
@@ -128,6 +126,7 @@ TARGET_COPY_OUT_SYSTEM_EXT := system_ext
 TARGET_COPY_OUT_VENDOR_DLKM := vendor_dlkm
 TARGET_COPY_OUT_SYSTEM_DLKM := system_dlkm
 TARGET_COPY_OUT_ODM_DLKM := odm_dlkm
+BOARD_ROOT_EXTRA_FOLDERS += lenovocust
 
 # Recovery (Boot v4 Embedded Vendor Ramdisk Recovery - No Physical Recovery Partition)
 BOARD_USES_RECOVERY_AS_BOOT := false
@@ -165,8 +164,10 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 
 # HIDL / VINTF Manifest
 DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/vintf/manifest.xml
+DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += $(DEVICE_PATH)/configs/vintf/framework_compatibility_matrix.xml
 
 # Sepolicy
+include device/mediatek/sepolicy_vndr/SEPolicy.mk
 BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
 # Wi-Fi (MediaTek MT6631/MT6635 connac1x)
@@ -174,6 +175,11 @@ WPA_SUPPLICANT_VERSION := VER_0_8_X
 BOARD_WPA_SUPPLICANT_DRIVER := NL80211
 BOARD_HOSTAPD_DRIVER := NL80211
 WIFI_HIDL_UNIFIED_SUPPLICANT_SERVICE_RC_ENTRY := true
+WIFI_MULTIPLE_VENDOR_HALS := true
+
+# Build Broken Rules
+# Android 16 (BP2A) vendor prebuilt ELFs link unextracted vendor/BP2A shared libs
+BUILD_BROKEN_PREBUILT_ELF_FILES := true
 
 # Inherit proprietary vendor BoardConfig
 include vendor/lenovo/poplar/BoardConfigVendor.mk

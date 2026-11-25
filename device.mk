@@ -6,7 +6,8 @@
 
 # Soong Namespace
 PRODUCT_SOONG_NAMESPACES += \
-    $(LOCAL_PATH)
+    $(LOCAL_PATH) \
+    hardware/mediatek
 
 # Overlays
 DEVICE_PACKAGE_OVERLAYS += \
@@ -20,7 +21,8 @@ PRODUCT_CHARACTERISTICS := tablet
 # API Shipping Level & Dynamic Partitions / Virtual A/B
 PRODUCT_SHIPPING_API_LEVEL := 34
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
-$(call inherit-product, $(SRC_TARGET_DIR)/product/virtual_ab_ota/android_t_baseline.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/virtual_ab_ota/vabc_features.mk)
+PRODUCT_VIRTUAL_AB_COW_VERSION := 2
 
 # Inherit proprietary vendor blobs & makefiles
 $(call inherit-product, vendor/lenovo/poplar/poplar-vendor.mk)
@@ -35,9 +37,9 @@ PRODUCT_COPY_FILES += \
 
 # Rootdir Scripts & Fstab (Early First-Stage Mount + Vendor Init + Ueventd)
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/etc/fstab.mt6768:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6768 \
-    $(LOCAL_PATH)/rootdir/etc/fstab.mt6768:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.mt6768 \
-    $(LOCAL_PATH)/rootdir/etc/init.mt6768.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.mt6768.rc \
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt8786:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt8786 \
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt8786:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.mt8786 \
+    $(LOCAL_PATH)/rootdir/etc/init.mt8786.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.mt8786.rc \
     $(LOCAL_PATH)/rootdir/etc/init.target.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.target.rc \
     $(LOCAL_PATH)/rootdir/etc/init.connectivity.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.connectivity.rc \
     $(LOCAL_PATH)/rootdir/etc/ueventd.mt6768.rc:$(TARGET_COPY_OUT_VENDOR)/etc/ueventd.rc
@@ -77,10 +79,13 @@ PRODUCT_PACKAGES += \
     libvulkan \
     android.hardware.health-service.example \
     android.hardware.health-service.example_recovery \
-    android.hardware.light-service.lineage \
+    android.hardware.lights-service.example \
+    android.hardware.sensors-service.multihal \
     android.hardware.usb-service.mediatek \
     android.hardware.vibrator-service.example \
     android.hardware.wifi-service \
+    libwifi-hal-wrapper \
+    PoplarWifiOverlay \
     hostapd \
     libwpa_client \
     wpa_supplicant \

@@ -7,10 +7,11 @@
 
 on early-init
     # Load Wi-Fi dependencies in strict symbol resolution order before wlan_drv_gen4m_6768.ko
-    insmod /vendor_dlkm/lib/modules/rfkill.ko
-    insmod /vendor_dlkm/lib/modules/libarc4.ko
-    insmod /vendor_dlkm/lib/modules/cfg80211.ko
-    insmod /vendor_dlkm/lib/modules/mac80211.ko
+    # TODO(poplar): restore once system_dlkm/full vendor_dlkm modules are staged
+    # insmod /vendor_dlkm/lib/modules/rfkill.ko
+    # insmod /vendor_dlkm/lib/modules/libarc4.ko
+    # insmod /vendor_dlkm/lib/modules/cfg80211.ko
+    # insmod /vendor_dlkm/lib/modules/mac80211.ko
 
 on post-fs
     # Mount Lenovo OEM customization partition permissions
