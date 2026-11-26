@@ -12,7 +12,7 @@ with this device tree at device/lenovo/poplar.
 
 Options:
   --lunch PRODUCT       Required lunch target for the selected recovery tree.
-  --jobs N              Parallel build jobs (default: online CPU count, or 1).
+  --jobs N              Parallel jobs (default: detected online CPU count, or 1).
   --target TARGET       Build target (only vendorbootimage is supported).
   --setup-script FILE   Source an additional device setup script before lunch.
   --expect-branch PATH=BRANCH
@@ -21,9 +21,9 @@ Options:
   --dry-run             Validate settings and print the plan without building.
   -h, --help            Show this help.
 
-The expected-branch option checks already checked-out trees; it never switches
-branches or syncs repositories. TB311FU has no dedicated recovery partition,
-so this helper builds vendorbootimage only and never flashes the device.
+Branch checks only validate existing checkouts; they never switch branches or
+sync repositories. TB311FU has no dedicated recovery partition, so this helper
+builds vendorbootimage only and never flashes the device.
 EOF
 }
 
@@ -60,6 +60,14 @@ done
 [[ -f build/envsetup.sh ]] || fail "run this script from the root of an Android source checkout (build/envsetup.sh not found)"
 [[ -d device/lenovo/poplar ]] || fail "device tree must be at device/lenovo/poplar"
 [[ -f device/lenovo/poplar/recovery/BoardConfigRecovery.mk ]] || fail "recovery configuration is missing"
+[[ -f device/lenovo/poplar/recovery.fstab ]] || fail "device recovery.fstab is missing"
+[[ -f vendor/lenovo/poplar/BoardConfigVendor.mk ]] || fail "compatible vendor tree is missing at vendor/lenovo/poplar"
+
+# Match the device BoardConfig's source-kernel/prebuilt fallback. A missing
+# kernel input otherwise tends to fail much later in the Android build.
+if [[ ! -f kernel/lenovo/poplar/Makefile && ! -f device/lenovo/poplar/prebuilt/Image.gz ]]; then
+    fail "provide kernel/lenovo/poplar or device/lenovo/poplar/prebuilt/Image.gz"
+fi
 
 if [[ "$framework" == orangefox && -z "$setup_script" ]]; then
     setup_script="device/lenovo/poplar/recovery/orangefox/vendorsetup.sh"
@@ -73,8 +81,10 @@ for expectation in "${expected_branches[@]}"; do
     tree_path="${expectation%%=*}"
     expected_branch="${expectation#*=}"
     [[ -n "$tree_path" && -n "$expected_branch" ]] || fail "invalid --expect-branch '$expectation' (expected PATH=BRANCH)"
+    [[ -d "$tree_path" ]] || fail "checkout path not found: $tree_path"
     [[ -d "$tree_path/.git" || -f "$tree_path/.git" ]] || fail "not a Git checkout: $tree_path"
     actual_branch="$(git -C "$tree_path" branch --show-current)" || fail "cannot read branch for $tree_path"
+    [[ -n "$actual_branch" ]] || fail "$tree_path is in detached-HEAD state; check out the intended branch"
     [[ "$actual_branch" == "$expected_branch" ]] || fail "$tree_path is on '$actual_branch', expected '$expected_branch'"
 done
 
