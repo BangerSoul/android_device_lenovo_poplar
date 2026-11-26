@@ -1,48 +1,65 @@
-# Lenovo Tab TB311FU (`poplar`) recovery build notes
+# Lenovo Tab TB311FU (`poplar`) recovery builders
 
-This directory holds recovery-specific configuration, separate from the LineageOS ROM product setup. The hardware tree is for the MediaTek MT8786 / MT6768 Wi-Fi tablet.
+Recovery-only build helpers and notes for the MediaTek MT8786 / MT6768 Wi-Fi tablet. This directory is intentionally separate from the LineageOS ROM product setup.
 
-## Important layout facts
+## Device image layout
 
-- There is **no dedicated recovery partition**. Stock uses Android boot header v4 and the recovery ramdisk is carried in `vendor_boot`.
-- Build the recovery-bearing `vendor_boot` output; do not expect a standalone `recovery.img` or flash one to a made-up recovery partition.
-- `recovery.fstab` is the recovery mount table. The regular Android fstab and ROM init scripts are not substitutes for it.
-- `BoardConfig.mk` currently chooses a kernel from `kernel/lenovo/poplar` if a complete source tree is present, otherwise `prebuilt/Image.gz`. A successful build alone does not establish that the chosen kernel boots recovery or supports required touch, display, storage, and encryption features.
+- TB311FU has **no dedicated recovery partition**. Its boot images use Android boot header v4; recovery is carried in the `vendor_boot` image.
+- The supported build output here is `vendorbootimage`. These scripts do not create or flash a standalone `recovery.img` and never issue fastboot commands.
+- `recovery.fstab` is the recovery mount table. The regular Android fstab and ROM init scripts are not substitutes.
+- The base `BoardConfig.mk` selects the available device kernel source when present, otherwise the checked-in `prebuilt/Image.gz`. Neither choice is proof that recovery display, touchscreen, storage, and encryption work.
+- You must use a TWRP/OrangeFox source checkout compatible with this Android base and its vendor/kernel interface. Recovery source trees are not included here.
 
-## Shared recovery board settings
+## Preparation
 
-`BoardConfigRecovery.mk` contains the recovery-specific variables intended to be included from the device `BoardConfig.mk` for a recovery build. It preserves the device's existing boot-v4/vendor_boot arrangement and points recovery to `recovery.fstab`. It deliberately does not define a recovery flashing partition, enable unverified data decryption, or alter the ROM's product packages.
+From the root of the chosen recovery source checkout, put this tree at `device/lenovo/poplar`, and make sure its required Android source projects and device-specific vendor/kernel inputs are synced. Select a lunch product that is actually defined by that recovery checkout. These helpers deliberately require `--lunch` rather than guessing product names that may not exist in a given fork.
 
-For a local TWRP or OrangeFox source checkout, add this include after the device's base board settings:
+The recovery board settings live in `recovery/BoardConfigRecovery.mk` and are included by this branch's `BoardConfig.mk`. The OrangeFox setup file is `recovery/orangefox/vendorsetup.sh`; the OrangeFox builder sources it automatically. TWRP-specific optional setup can be passed with `--setup-script` if your TWRP tree requires one.
 
-```make
-include device/lenovo/poplar/recovery/BoardConfigRecovery.mk
+## TWRP builder
+
+```bash
+./device/lenovo/poplar/recovery/build-twrp.sh --lunch <TWRP_PRODUCT>
 ```
 
-Use the recovery project's own supported product definition and branch. TWRP and OrangeFox source trees/build systems are not vendored here. The exact product target and whether the recovery framework can emit a vendor_boot recovery fragment depend on the chosen upstream branch; verify that integration before treating the output as flashable.
+Options:
 
-## TWRP
+```text
+--lunch PRODUCT       Required, exact lunch target from the TWRP checkout
+--jobs N              Parallel build jobs (defaults to online CPU count)
+--target TARGET       Only vendorbootimage is accepted
+--setup-script FILE   Source an optional TWRP/device setup script
+--clean               Run m installclean before the build
+--dry-run             Validate paths/options and print the plan only
+--help                Show options
+```
 
-1. Sync a TWRP source tree compatible with the Android base and kernel/vendor interface used by this device.
-2. Add this device tree at `device/lenovo/poplar` and include `recovery/BoardConfigRecovery.mk` from its `BoardConfig.mk` in the local recovery build.
-3. Select the TWRP product target documented by that TWRP source tree, then build its recovery-bearing vendor boot image. Do not use the LineageOS `lineage_poplar` target as proof that TWRP is selected: on the normal LineageOS product it builds Lineage Recovery.
-4. Check the image contents with the upstream boot-image tooling and confirm the recovery ramdisk is a vendor_boot fragment before any device testing.
+## OrangeFox builder
 
-## OrangeFox
+```bash
+./device/lenovo/poplar/recovery/build-orangefox.sh --lunch <ORANGEFOX_PRODUCT>
+```
 
-OrangeFox uses its own source tree and device setup in addition to the shared hardware board configuration. `orangefox/vendorsetup.sh` contains only conservative, device-specific environment declarations; source it from the OrangeFox build environment as described by that checkout. Do not add a recovery install-partition path: this device has no standalone recovery partition.
+The OrangeFox builder sources `recovery/orangefox/vendorsetup.sh` for `poplar` before lunch. Use `--setup-script FILE` to replace it with a setup script required by your checkout. Options are the same as the TWRP builder.
 
-Build the recovery-bearing vendor boot image using the target and commands documented by the exact OrangeFox source branch. Confirm the resulting image contains the OrangeFox recovery ramdisk and is compatible with this tablet's bootloader before testing.
+Both builders execute `m -jN vendorbootimage` after lunch. To inspect arguments without starting a build:
 
-## Validation still required on hardware
+```bash
+./device/lenovo/poplar/recovery/build-twrp.sh --lunch <TWRP_PRODUCT> --jobs 8 --dry-run
+./device/lenovo/poplar/recovery/build-orangefox.sh --lunch <ORANGEFOX_PRODUCT> --dry-run
+```
 
-This branch has not been built or boot-tested as TWRP/OrangeFox in this workspace. Before calling a release ready, validate at minimum:
+The helpers must be run from the Android source root. They don't sync source repositories, modify the device tree, or flash images. A completed build is not hardware validation: inspect the produced vendor_boot ramdisk/table with the tools from that source tree and verify its recovery fragment before any boot/flash testing.
 
-- the selected kernel, DTB/DTBO, boot-header-v4 arguments, and vendor_boot fragment layout;
+## Required validation before release
+
+Test on the exact TB311FU hardware and stock firmware baseline. At minimum verify:
+
+- boot header v4, DTB/DTBO and vendor_boot fragment composition;
 - touchscreen orientation/input and 1200×1920 display initialization;
-- partition discovery, dynamic/logical partition mounting, EROFS reads, and F2FS userdata handling;
-- whether `/data` decryption is supported by the selected recovery base and required device/vendor components;
-- ADB and USB behavior, sideload, reboot targets, and recovery logs;
-- that format/wipe/flash actions cannot target protected calibration or firmware partitions unintentionally.
+- physical and logical partition discovery, dynamic partition mounting, EROFS reads, and F2FS userdata handling;
+- `/data` decryption only if the chosen recovery base and required components demonstrably support it;
+- ADB/USB, sideload, reboot destinations, and recovery logs;
+- safe mount/format/flash behavior, especially for calibration, NV, bootloader, and other firmware partitions.
 
-Do not treat the presence of a partition in `recovery.fstab` as evidence that it is safe to wipe or flash. Keep personal data backed up and validate recovery images on an expendable test setup first.
+Do not infer that a partition is safe to wipe or flash merely because it appears in `recovery.fstab`. Keep a complete backup and validate on a recoverable test setup. Do not distribute as build-ready until build and device validation are recorded.

@@ -10,10 +10,10 @@ if [[ "${1:-}" == "$FDEVICE" || "${FOX_BUILD_DEVICE:-}" == "$FDEVICE" ]]; then
     export TARGET_DEVICE_ALT="TB311FU,poplar_row_wifi"
     export FOX_TARGET_DEVICES="poplar,TB311FU,poplar_row_wifi"
 
-    # The device uses dynamic logical partitions and Virtual A/B OTA.
+    # This tablet uses dynamic logical partitions and Virtual A/B OTA.
     export OF_AB_DEVICE=1
     export OF_VIRTUAL_AB_DEVICE=1
     export OF_ENABLE_LPTOOLS=1
 
-    # No FOX_RECOVERY_INSTALL_PARTITION is set: recovery lives in vendor_boot.
+    # No FOX_RECOVERY_INSTALL_PARTITION: recovery is part of vendor_boot.
 fi
