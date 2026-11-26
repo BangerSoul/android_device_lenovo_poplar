@@ -1,37 +1,25 @@
 # Lenovo Tab TB311FU (`poplar`) recovery builders
 
-Recovery-only build helpers and notes for the MediaTek MT8786 / MT6768 Wi-Fi tablet. This directory is intentionally separate from the LineageOS ROM product setup.
+Recovery-device configuration and build helpers for TWRP and OrangeFox on the Lenovo Tab Wi-Fi (`TB311FU`, codename `poplar` / `poplar_row_wifi`). This is a separate device-tree branch for recovery work, not a complete recovery source tree.
 
-## Device image layout
+## Device layout and reference trees
 
-- TB311FU has **no dedicated recovery partition**. Its boot images use Android boot header v4; recovery is carried in the `vendor_boot` image.
-- The supported build output here is `vendorbootimage`. These scripts do not create or flash a standalone `recovery.img` and never issue fastboot commands.
-- `recovery.fstab` is the recovery mount table. The regular Android fstab and ROM init scripts are not substitutes.
-- The base `BoardConfig.mk` selects the available device kernel source when present, otherwise the checked-in `prebuilt/Image.gz`. Neither choice is proof that recovery display, touchscreen, storage, and encryption work.
-- You must use a TWRP/OrangeFox source checkout compatible with this Android base and its vendor/kernel interface. Recovery source trees are not included here.
+- MediaTek MT8786 / MT6768, Android boot header v4, A/B and Virtual A/B.
+- There is **no dedicated recovery partition**. Recovery is carried in `vendor_boot`; the supported output target is `vendorbootimage`.
+- `recovery.fstab` describes recovery mount points; it is not permission to wipe or flash a partition.
+- Use this device configuration with compatible kernel and vendor inputs. The related proprietary tree documents the Lenovo stock firmware baseline and blob provenance: [proprietary_vendor_lenovo_poplar](https://github.com/BangerSoul/proprietary_vendor_lenovo_poplar), branch `lineage-21.0`. The ROM device/vendor trees are on `lineage-21.0`; this recovery tree is on `recovery/twrp-orangefox`.
+- Recovery source code is not included. Select and sync a TWRP or OrangeFox source branch that is compatible with its Android base and this device's boot/vendor interface. These scripts do not guess, fetch, or switch recovery source branches.
 
-## Preparation
+## Prepare the workspace
 
-From the root of the chosen recovery source checkout, put this tree at `device/lenovo/poplar`, and make sure its required Android source projects and device-specific vendor/kernel inputs are synced. Select a lunch product that is actually defined by that recovery checkout. These helpers deliberately require `--lunch` rather than guessing product names that may not exist in a given fork.
+From the root of a compatible Android recovery checkout, place this tree at `device/lenovo/poplar` and provide matching vendor/kernel projects where required by the selected recovery base. Check branch alignment before building; optional `--expect-branch PATH=BRANCH` checks one or more already checked-out trees without modifying them.
 
-The recovery board settings live in `recovery/BoardConfigRecovery.mk` and are included by this branch's `BoardConfig.mk`. The OrangeFox setup file is `recovery/orangefox/vendorsetup.sh`; the OrangeFox builder sources it automatically. TWRP-specific optional setup can be passed with `--setup-script` if your TWRP tree requires one.
+The recovery board configuration is `recovery/BoardConfigRecovery.mk`; OrangeFox device setup defaults to `recovery/orangefox/vendorsetup.sh`. The builder never runs `fastboot` and never flashes images.
 
 ## TWRP builder
 
 ```bash
 ./device/lenovo/poplar/recovery/build-twrp.sh --lunch <TWRP_PRODUCT>
-```
-
-Options:
-
-```text
---lunch PRODUCT       Required, exact lunch target from the TWRP checkout
---jobs N              Parallel build jobs (defaults to online CPU count)
---target TARGET       Only vendorbootimage is accepted
---setup-script FILE   Source an optional TWRP/device setup script
---clean               Run m installclean before the build
---dry-run             Validate paths/options and print the plan only
---help                Show options
 ```
 
 ## OrangeFox builder
@@ -40,26 +28,38 @@ Options:
 ./device/lenovo/poplar/recovery/build-orangefox.sh --lunch <ORANGEFOX_PRODUCT>
 ```
 
-The OrangeFox builder sources `recovery/orangefox/vendorsetup.sh` for `poplar` before lunch. Use `--setup-script FILE` to replace it with a setup script required by your checkout. Options are the same as the TWRP builder.
+## Options (both builders)
 
-Both builders execute `m -jN vendorbootimage` after lunch. To inspect arguments without starting a build:
-
-```bash
-./device/lenovo/poplar/recovery/build-twrp.sh --lunch <TWRP_PRODUCT> --jobs 8 --dry-run
-./device/lenovo/poplar/recovery/build-orangefox.sh --lunch <ORANGEFOX_PRODUCT> --dry-run
+```text
+--lunch PRODUCT          Required exact lunch target provided by your recovery checkout
+--jobs N                 Parallel jobs (default: detected online CPU count, or 1)
+--target TARGET          Only vendorbootimage is accepted for this device
+--setup-script FILE      Source an optional device setup script before lunch
+--expect-branch PATH=BRANCH
+                         Verify an existing Git checkout is on the requested branch; repeatable
+--clean                  Run installclean before the build
+--dry-run                Validate options/branches and print the plan without building
+-h, --help               Show help
 ```
 
-The helpers must be run from the Android source root. They don't sync source repositories, modify the device tree, or flash images. A completed build is not hardware validation: inspect the produced vendor_boot ramdisk/table with the tools from that source tree and verify its recovery fragment before any boot/flash testing.
+Example with explicit checkout-branch checks:
 
-## Required validation before release
+```bash
+./device/lenovo/poplar/recovery/build-twrp.sh \
+  --lunch <TWRP_PRODUCT> --jobs 8 \
+  --expect-branch device/lenovo/poplar=recovery/twrp-orangefox \
+  --expect-branch vendor/lenovo/poplar=lineage-21.0 \
+  --dry-run
 
-Test on the exact TB311FU hardware and stock firmware baseline. At minimum verify:
+./device/lenovo/poplar/recovery/build-orangefox.sh \
+  --lunch <ORANGEFOX_PRODUCT> --setup-script /path/to/device-setup.sh \
+  --expect-branch device/lenovo/poplar=recovery/twrp-orangefox --clean
+```
 
-- boot header v4, DTB/DTBO and vendor_boot fragment composition;
-- touchscreen orientation/input and 1200×1920 display initialization;
-- physical and logical partition discovery, dynamic partition mounting, EROFS reads, and F2FS userdata handling;
-- `/data` decryption only if the chosen recovery base and required components demonstrably support it;
-- ADB/USB, sideload, reboot destinations, and recovery logs;
-- safe mount/format/flash behavior, especially for calibration, NV, bootloader, and other firmware partitions.
+`--expect-branch` is a validation guard only; it does not checkout or update branches. The `--lunch` target must exist in the chosen recovery source tree. Do not mix branches or vendor/kernel inputs unless their compatibility is established.
 
-Do not infer that a partition is safe to wipe or flash merely because it appears in `recovery.fstab`. Keep a complete backup and validate on a recoverable test setup. Do not distribute as build-ready until build and device validation are recorded.
+## Validate before release
+
+Review the built image for boot header v4, vendor-boot ramdisk fragments, DTB/DTBO composition, and partition-size limits. Test on the exact TB311FU hardware and a recoverable setup: display/touch, physical and dynamic logical partition discovery, EROFS reads, F2FS userdata behavior, ADB/USB, sideload, reboot destinations, logs, and restore paths. Only claim `/data` decryption after it has been demonstrated on-device with the selected base and required components.
+
+Keep full backups. Protect calibration, NV, bootloader, and firmware partitions. A successful build is not hardware validation or evidence that a recovery build is stable; test thoroughly before distribution.
