@@ -180,6 +180,8 @@ WIFI_MULTIPLE_VENDOR_HALS := true
 # Build Broken Rules
 # Android 16 (BP2A) vendor prebuilt ELFs link unextracted vendor/BP2A shared libs
 BUILD_BROKEN_PREBUILT_ELF_FILES := true
+# Vendor kernel modules (.ko) in vendor_dlkm/lib/modules/ are copied via PRODUCT_COPY_FILES
+BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 
 # Inherit proprietary vendor BoardConfig
 include vendor/lenovo/poplar/BoardConfigVendor.mk
