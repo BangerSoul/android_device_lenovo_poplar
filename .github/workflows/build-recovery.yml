@@ -1,0 +1,189 @@
+name: Build Recovery (TWRP / OrangeFox / AOSP)
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Recovery variant to build"
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - twrp
+          - orangefox
+          - aosp
+      twrp_branch:
+        description: "minimal-manifest-twrp branch (e.g. twrp-12.1, twrp-14.1)"
+        required: false
+        default: twrp-12.1
+        type: string
+      fox_branch:
+        description: "OrangeFox sync branch (12.1 ~45GB, 14.1 ~85GB experimental)"
+        required: false
+        type: choice
+        default: "12.1"
+        options:
+          - "12.1"
+          - "14.1"
+      aosp_branch:
+        description: "AOSP manifest branch/tag for AOSP recovery build"
+        required: false
+        default: android-14.0.0_r67
+        type: string
+  push:
+    branches:
+      - recovery/twrp-orangefox
+    paths:
+      - "BoardConfig.mk"
+      - "AndroidProducts.mk"
+      - "device.mk"
+      - "poplar_recovery_base.mk"
+      - "twrp_poplar.mk"
+      - "aosp_poplar.mk"
+      - "lineage_poplar.mk"
+      - "recovery.fstab"
+      - "prebuilt/**"
+      - "recovery/**"
+      - ".github/workflows/build-recovery.yml"
+
+concurrency:
+  group: recovery-${{ github.ref }}-${{ github.event.inputs.variant || 'all' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.variant }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.variant != 'all') && fromJSON(format('["{0}"]', github.event.inputs.variant)) || fromJSON('["twrp", "orangefox", "aosp"]') }}
+
+    steps:
+      - name: Maximize runner disk space & configure swap
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL /usr/share/swift || true
+          sudo docker system prune -af || true
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential ccache curl flex git-core gnupg gperf \
+            imagemagick lib32ncurses5-dev libelf-dev liblz4-tool libncurses5-dev \
+            libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush \
+            python3 python-is-python3 rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+          if [ ! -f /ci-swapfile ]; then
+            sudo fallocate -l 16G /ci-swapfile
+            sudo chmod 600 /ci-swapfile
+            sudo mkswap /ci-swapfile
+            sudo swapon /ci-swapfile
+          fi
+          sudo sysctl -w vm.swappiness=60 || true
+          df -h
+          free -h
+
+      - name: Install repo tool
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/.local/bin/repo"
+          chmod +x "$HOME/.local/bin/repo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          git config --global user.name "CI Builder"
+          git config --global user.email "ci-builder@users.noreply.github.com"
+          git config --global color.ui false
+
+      - name: Checkout poplar device tree (self)
+        uses: actions/checkout@v4
+        with:
+          path: src_device
+
+      - name: Sync TWRP minimal manifest (twrp)
+        if: matrix.variant == 'twrp'
+        run: |
+          mkdir -p "$HOME/work" && cd "$HOME/work"
+          TWRP_BR="${{ github.event.inputs.twrp_branch || 'twrp-12.1' }}"
+          repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b "$TWRP_BR"
+          repo sync -c -j8 --no-tags --no-clone-bundle --force-sync --optimized-fetch
+          rm -rf .repo/project-objects .repo/projects
+
+      - name: Sync OrangeFox manifest (orangefox)
+        if: matrix.variant == 'orangefox'
+        run: |
+          FOX_BR="${{ github.event.inputs.fox_branch || '12.1' }}"
+          mkdir -p "$HOME/work" "$HOME/fox-sync"
+          git clone --depth=1 https://gitlab.com/OrangeFox/sync.git "$HOME/fox-sync"
+          cd "$HOME/fox-sync"
+          bash orangefox_sync.sh --branch "$FOX_BR" --path "$HOME/work"
+          rm -rf "$HOME/work/.repo/project-objects" "$HOME/work/.repo/projects" "$HOME/fox-sync"
+
+      - name: Sync AOSP shallow recovery workspace (aosp)
+        if: matrix.variant == 'aosp'
+        run: |
+          mkdir -p "$HOME/work" && cd "$HOME/work"
+          AOSP_BR="${{ github.event.inputs.aosp_branch || 'android-14.0.0_r67' }}"
+          repo init --depth=1 \
+            -u https://android.googlesource.com/platform/manifest -b "$AOSP_BR" \
+            --groups=default,-darwin,-cts,-notdefault
+          mkdir -p .repo/local_manifests
+          curl -fsSL \
+            https://raw.githubusercontent.com/minimal-manifest-twrp/platform_manifest_twrp_aosp/twrp-14.1/remove-minimal.xml \
+            | sed 's/<remove-project /<remove-project optional="true" /g' \
+            > .repo/local_manifests/prune-unused.xml
+          repo sync -c -j8 --no-tags --no-clone-bundle --force-sync --optimized-fetch
+          rm -rf .repo/project-objects .repo/projects
+
+      - name: Stage poplar device, vendor, and kernel trees
+        run: |
+          WORK="$HOME/work"
+          mkdir -p "$WORK/device/lenovo" "$WORK/vendor/lenovo" "$WORK/kernel/lenovo"
+          cp -a "$GITHUB_WORKSPACE/src_device" "$WORK/device/lenovo/poplar"
+          git clone --depth=1 -b lineage-21.0 \
+            https://github.com/BangerSoul/proprietary_vendor_lenovo_poplar.git \
+            "$WORK/vendor/lenovo/poplar"
+          git clone --depth=1 -b lineage-21.0 \
+            https://github.com/BangerSoul/android_kernel_lenovo_poplar.git \
+            "$WORK/kernel/lenovo/poplar"
+
+      - name: Build vendorbootimage (${{ matrix.variant }})
+        run: |
+          cd "$HOME/work"
+          export USE_CCACHE=1
+          export GOGC=50
+          export RECOVERY_VARIANT="${{ matrix.variant }}"
+          export ALLOW_MISSING_DEPENDENCIES=true
+          if [ "${{ matrix.variant }}" = "twrp" ]; then
+            bash device/lenovo/poplar/recovery/build-twrp.sh --lunch twrp_poplar-eng --jobs "$(nproc)"
+          elif [ "${{ matrix.variant }}" = "orangefox" ]; then
+            bash device/lenovo/poplar/recovery/build-orangefox.sh --lunch twrp_poplar-eng --jobs "$(nproc)"
+          else
+            bash device/lenovo/poplar/recovery/build-aosp.sh --lunch aosp_poplar-userdebug --jobs "$(nproc)"
+          fi
+
+      - name: Package & verify Boot v4 vendor_boot.img
+        run: |
+          cd "$HOME/work"
+          OUT_DIR="out/target/product/poplar"
+          ART_DIR="$GITHUB_WORKSPACE/ci-artifacts/${{ matrix.variant }}"
+          mkdir -p "$ART_DIR"
+          VBOOT="$OUT_DIR/vendor_boot.img"
+          test -f "$VBOOT"
+          SIZE=$(stat -c %s "$VBOOT")
+          echo "vendor_boot.img size: $SIZE bytes"
+          test "$SIZE" -le 67108864
+          OUT_NAME="poplar-${{ matrix.variant }}-vendor_boot-${GITHUB_SHA::7}.img"
+          cp "$VBOOT" "$ART_DIR/$OUT_NAME"
+          cp "$OUT_DIR/dtb.img" "$ART_DIR/" 2>/dev/null || true
+          if [ -x out/host/linux-x86/bin/unpack_bootimg ]; then
+            TMPU="$(mktemp -d)"
+            out/host/linux-x86/bin/unpack_bootimg --boot_img "$ART_DIR/$OUT_NAME" --out "$TMPU" | tee "$ART_DIR/unpack_bootimg.txt"
+            grep -qE '^dtb size: [1-9][0-9]+' "$ART_DIR/unpack_bootimg.txt"
+            rm -rf "$TMPU"
+          fi
+          (cd "$ART_DIR" && sha256sum "$OUT_NAME" > "${OUT_NAME}.sha256sum")
+          cat "$ART_DIR/${OUT_NAME}.sha256sum"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: poplar-recovery-${{ matrix.variant }}
+          path: ci-artifacts/${{ matrix.variant }}/
+          if-no-files-found: error

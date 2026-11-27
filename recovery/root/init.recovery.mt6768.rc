@@ -1,0 +1,2 @@
+# Fallback import when bootloader passes ro.hardware=mt6768
+import /init.recovery.mt8786.rc
