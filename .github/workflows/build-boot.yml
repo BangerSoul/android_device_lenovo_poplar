@@ -86,8 +86,15 @@ jobs:
 
           rm_tree = ET.parse("/tmp/remove-minimal.xml")
           rm_root = rm_tree.getroot()
-          for el in rm_root.findall("remove-project"):
-              el.set("optional", "true")
+          keep_aosp = {
+              "hardware/google/interfaces",
+              "hardware/google/pixel",
+          }
+          for el in list(rm_root.findall("remove-project")):
+              if el.get("path") in keep_aosp or el.get("name") in keep_aosp:
+                  rm_root.remove(el)
+              else:
+                  el.set("optional", "true")
 
           keep_lineage = {
               "android",
