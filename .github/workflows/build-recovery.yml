@@ -129,6 +129,27 @@ jobs:
             | sed 's/<remove-project /<remove-project optional="true" /g' \
             > .repo/local_manifests/prune-unused.xml
           repo sync -c -j8 --no-tags --no-clone-bundle --force-sync --optimized-fetch
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("build/soong/java/ravenwood.go")
+          if p.is_file():
+              src = p.read_text()
+              needle = '\t\tlibModule := ctx.GetDirectDepWithTag(lib, ravenwoodLibContentTag)\n'
+              guard = (
+                  needle
+                  + '\t\tif libModule == nil {\n'
+                  + '\t\t\tif ctx.Config().AllowMissingDependencies() {\n'
+                  + '\t\t\t\tctx.AddMissingDependencies([]string{lib})\n'
+                  + '\t\t\t} else {\n'
+                  + '\t\t\t\tctx.PropertyErrorf("lib", "missing dependency %q", lib)\n'
+                  + '\t\t\t}\n'
+                  + '\t\t\tcontinue\n'
+                  + '\t\t}\n'
+              )
+              if 'if libModule == nil' not in src and needle in src:
+                  p.write_text(src.replace(needle, guard, 1))
+                  print("Applied TeamWin/AOSP e2019ec guard to build/soong/java/ravenwood.go")
+          PY
           rm -rf .repo/project-objects .repo/projects
 
       - name: Stage poplar device, vendor, and kernel trees

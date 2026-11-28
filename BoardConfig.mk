@@ -156,12 +156,12 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/configs/vintf/manifest.xml
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += $(DEVICE_PATH)/configs/vintf/framework_compatibility_matrix.xml
 
-# Sepolicy (optional when building on minimal recovery manifests)
+# Sepolicy (only included when MediaTek vendor sepolicy tree is present; minimal recovery manifests omit it)
 ifneq ($(wildcard device/mediatek/sepolicy_vndr/SEPolicy.mk),)
     include device/mediatek/sepolicy_vndr/SEPolicy.mk
-endif
-ifneq ($(wildcard $(DEVICE_PATH)/sepolicy/vendor),)
-    BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
+    ifneq ($(wildcard $(DEVICE_PATH)/sepolicy/vendor),)
+        BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
+    endif
 endif
 
 # Build Broken Rules
