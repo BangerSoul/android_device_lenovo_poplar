@@ -133,8 +133,6 @@ jobs:
               "prebuilts/abi-dumps/ndk",
               "prebuilts/abi-dumps/platform",
               "prebuilts/abi-dumps/vndk",
-              "prebuilts/bazel/common",
-              "prebuilts/bazel/linux-x86_64",
               "prebuilts/clang/kernel/linux-x86/clang-r416183b",
               "prebuilts/gradle-plugin",
               "cts",
