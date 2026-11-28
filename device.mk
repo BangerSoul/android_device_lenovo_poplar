@@ -39,10 +39,39 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/fstab.mt8786:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt8786 \
     $(LOCAL_PATH)/rootdir/etc/fstab.mt8786:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/first_stage_ramdisk/fstab.mt8786 \
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt8786:$(TARGET_COPY_OUT_RECOVERY)/root/first_stage_ramdisk/fstab.mt8786 \
     $(LOCAL_PATH)/rootdir/etc/init.mt8786.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.mt8786.rc \
     $(LOCAL_PATH)/rootdir/etc/init.target.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.target.rc \
     $(LOCAL_PATH)/rootdir/etc/init.connectivity.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.connectivity.rc \
     $(LOCAL_PATH)/rootdir/etc/ueventd.mt6768.rc:$(TARGET_COPY_OUT_VENDOR)/etc/ueventd.rc
+
+# Recovery Init Scripts (ConfigFS musb-hdrc USB, Backlight Floor & Module Loading)
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/recovery/root/init.recovery.mt8786.rc:$(TARGET_COPY_OUT_RECOVERY)/root/init.recovery.mt8786.rc \
+    $(LOCAL_PATH)/recovery/root/init.recovery.mt6768.rc:$(TARGET_COPY_OUT_RECOVERY)/root/init.recovery.mt6768.rc
+
+# Stage Touch, DVFS & Thermal Modules into Vendor Ramdisk and Recovery Ramdisk
+ifneq ($(wildcard vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/hx83102e.ko),)
+PRODUCT_COPY_FILES += \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/hx83102e.ko:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib/modules/hx83102e.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/jd9366ts.ko:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib/modules/jd9366ts.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/nt36523h.ko:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib/modules/nt36523h.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/CPU_DVFS.ko:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib/modules/CPU_DVFS.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/thermal_monitor.ko:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib/modules/thermal_monitor.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/hx83102e.ko:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/lib/modules/hx83102e.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/jd9366ts.ko:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/lib/modules/jd9366ts.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/nt36523h.ko:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/lib/modules/nt36523h.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/CPU_DVFS.ko:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/lib/modules/CPU_DVFS.ko \
+    vendor/lenovo/poplar/proprietary/vendor_dlkm/lib/modules/thermal_monitor.ko:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/lib/modules/thermal_monitor.ko
+endif
+
+ifneq ($(wildcard vendor/lenovo/poplar/proprietary/vendor/bin/teei_daemon),)
+PRODUCT_COPY_FILES += \
+    vendor/lenovo/poplar/proprietary/vendor/bin/teei_daemon:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/bin/teei_daemon \
+    vendor/lenovo/poplar/proprietary/vendor/bin/init_thh:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/bin/init_thh \
+    vendor/lenovo/poplar/proprietary/vendor/lib64/libteei_daemon_vfs.so:$(TARGET_COPY_OUT_RECOVERY)/root/vendor/lib64/libteei_daemon_vfs.so \
+    $(foreach ta,$(wildcard vendor/lenovo/poplar/proprietary/vendor/thh/ta/*),$(ta):$(TARGET_COPY_OUT_RECOVERY)/root/vendor/thh/ta/$(notdir $(ta)))
+endif
 
 # Permissions (Hardware Features)
 PRODUCT_COPY_FILES += \
