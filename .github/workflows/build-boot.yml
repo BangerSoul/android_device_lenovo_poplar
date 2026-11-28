@@ -1,0 +1,293 @@
+name: Build Poplar Boot & Vendor Boot Images (lineage-21.0)
+
+on:
+  workflow_dispatch:
+    inputs:
+      alpha_tag:
+        description: "Release tag holding unchanged alpha super/dlkm partitions"
+        required: false
+        default: "lineage-21.0-20261127-alpha"
+  push:
+    branches:
+      - lineage-21.0
+    paths:
+      - "BoardConfig.mk"
+      - "bootimg.mk"
+      - "device.mk"
+      - "lineage_poplar.mk"
+      - "AndroidProducts.mk"
+      - "prebuilt/**"
+      - "recovery/**"
+      - "rootdir/**"
+      - ".github/workflows/build-boot.yml"
+
+concurrency:
+  group: build-boot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_boot_images:
+    name: Build Boot + Init Boot + Vendor Boot (lineage-21.0)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/share/swift \
+            /usr/local/.ghcup \
+            /usr/local/share/boost || true
+          df -h
+
+      - name: Install Android build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
+            git git-lfs gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev \
+            lib32z1-dev libelf-dev liblz4-tool libncurses5-dev libsdl1.2-dev \
+            libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool \
+            squashfs-tools xsltproc zip zlib1g-dev python3 python-is-python3 cpio
+          sudo apt-get clean
+          df -h
+
+      - name: Install repo tool
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/.local/bin/repo"
+          chmod +x "$HOME/.local/bin/repo"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          git config --global user.name "CI Builder"
+          git config --global user.email "ci-builder@users.noreply.github.com"
+          git config --global color.ui false
+
+      - name: Checkout poplar device tree (self)
+        uses: actions/checkout@v4
+        with:
+          path: src_device
+
+      - name: Sync pruned LineageOS 21.0 workspace
+        run: |
+          mkdir -p "$HOME/work" && cd "$HOME/work"
+          repo init --depth=1 \
+            -u https://github.com/LineageOS/android.git -b lineage-21.0 \
+            --groups=default,-darwin,-cts,-notdefault
+          mkdir -p .repo/local_manifests
+          curl -fsSL \
+            https://raw.githubusercontent.com/minimal-manifest-twrp/platform_manifest_twrp_aosp/twrp-14.1/remove-minimal.xml \
+            -o /tmp/remove-minimal.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          rm_tree = ET.parse("/tmp/remove-minimal.xml")
+          rm_root = rm_tree.getroot()
+          for el in rm_root.findall("remove-project"):
+              el.set("optional", "true")
+
+          keep_lineage = {
+              "android",
+              "device/lineage/sepolicy",
+              "hardware/lineage/compat",
+              "hardware/lineage/interfaces",
+              "hardware/lineage/livedisplay",
+              "lineage-sdk",
+              "packages/apps/FMRadio",
+              "packages/resources/devicesettings",
+              "external/bash",
+              "external/exfatprogs",
+              "external/htop",
+              "external/libncurses",
+              "external/nano",
+              "external/ntfs-3g",
+              "external/openssh",
+              "external/rsync",
+              "external/tinyxml",
+              "prebuilts/kernel-build-tools",
+              "prebuilts/tools-lineage",
+              "vendor/lineage",
+          }
+
+          already_paths = {e.get("path") for e in rm_root.findall("remove-project") if e.get("path")}
+          already_names = {e.get("name") for e in rm_root.findall("remove-project") if e.get("name")}
+
+          lineage_snip = Path(".repo/manifests/snippets/lineage.xml")
+          if lineage_snip.is_file():
+              lroot = ET.parse(lineage_snip).getroot()
+              for p in lroot.findall("project"):
+                  path = p.get("path", p.get("name"))
+                  name = p.get("name")
+                  if path in keep_lineage or path in already_paths or name in already_names:
+                      continue
+                  el = ET.SubElement(rm_root, "remove-project", {"optional": "true"})
+                  if p.get("path"):
+                      el.set("path", path)
+                  else:
+                      el.set("name", name)
+
+          for heavy in (
+              "prebuilts/abi-dumps/ndk",
+              "prebuilts/abi-dumps/platform",
+              "prebuilts/abi-dumps/vndk",
+              "prebuilts/bazel/common",
+              "prebuilts/bazel/linux-x86_64",
+              "prebuilts/clang/kernel/linux-x86/clang-r416183b",
+              "prebuilts/gradle-plugin",
+              "cts",
+          ):
+              if heavy not in already_paths:
+                  ET.SubElement(rm_root, "remove-project", {"path": heavy, "optional": "true"})
+
+          ET.indent(rm_root, space="    ")
+          rm_tree.write(".repo/local_manifests/prune-unused.xml", encoding="utf-8", xml_declaration=True)
+          print("Total pruned projects:", len(rm_root.findall("remove-project")))
+          PY
+          repo sync -c -j8 --no-tags --no-clone-bundle --force-sync --optimized-fetch
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("build/soong/java/ravenwood.go")
+          if p.is_file():
+              src = p.read_text()
+              needle = "\t\tlibModule := ctx.GetDirectDepWithTag(lib, ravenwoodLibContentTag)\n"
+              guard = (
+                  needle
+                  + "\t\tif libModule == nil {\n"
+                  + "\t\t\tif ctx.Config().AllowMissingDependencies() {\n"
+                  + "\t\t\t\tctx.AddMissingDependencies([]string{lib})\n"
+                  + "\t\t\t} else {\n"
+                  + '\t\t\t\tctx.PropertyErrorf("lib", "missing dependency %q", lib)\n'
+                  + "\t\t\t}\n"
+                  + "\t\t\tcontinue\n"
+                  + "\t\t}\n"
+              )
+              if "if libModule == nil" not in src and needle in src:
+                  p.write_text(src.replace(needle, guard, 1))
+                  print("Applied e2019ec guard to build/soong/java/ravenwood.go")
+          PY
+          rm -rf .repo/project-objects .repo/projects
+          sudo fallocate -l 16G /ci-swapfile || sudo dd if=/dev/zero of=/ci-swapfile bs=1M count=16384 status=none
+          sudo chmod 600 /ci-swapfile
+          sudo mkswap /ci-swapfile
+          sudo swapon /ci-swapfile
+          sudo sysctl -w vm.swappiness=60 || true
+          df -h
+          free -h
+
+      - name: Stage poplar device, vendor, kernel, and MediaTek trees
+        run: |
+          WORK="$HOME/work"
+          mkdir -p "$WORK/device/lenovo" "$WORK/vendor/lenovo" "$WORK/kernel/lenovo" \
+                   "$WORK/hardware" "$WORK/device/mediatek"
+          cp -a "$GITHUB_WORKSPACE/src_device" "$WORK/device/lenovo/poplar"
+          git clone --depth=1 -b lineage-21.0 \
+            https://github.com/BangerSoul/proprietary_vendor_lenovo_poplar.git \
+            "$WORK/vendor/lenovo/poplar"
+          git clone --depth=1 -b lineage-21.0 \
+            https://github.com/BangerSoul/android_kernel_lenovo_poplar.git \
+            "$WORK/kernel/lenovo/poplar"
+          git clone --depth=1 -b lineage-21 \
+            https://github.com/LineageOS/android_hardware_mediatek.git \
+            "$WORK/hardware/mediatek"
+          git clone --depth=1 -b lineage-21 \
+            https://github.com/LineageOS/android_device_mediatek_sepolicy_vndr.git \
+            "$WORK/device/mediatek/sepolicy_vndr"
+
+      - name: Build bootimage, initbootimage, and vendorbootimage
+        run: |
+          cd "$HOME/work"
+          export LC_ALL=C
+          export ALLOW_MISSING_DEPENDENCIES=true
+          export GOGC=50
+          set +e +u
+          set +o pipefail
+          source build/envsetup.sh
+          if [[ -f build/release/build_config/ap2a.scl ]]; then
+            lunch lineage_poplar-ap2a-userdebug
+          else
+            lunch lineage_poplar-userdebug
+          fi
+          lunch_rc=$?
+          ((lunch_rc == 0)) || exit "$lunch_rc"
+          m -j"$(nproc)" bootimage initbootimage vendorbootimage avbtool unpack_bootimg
+          build_rc=$?
+          set -euo pipefail
+          exit "$build_rc"
+
+      - name: Refresh vbmeta.img against alpha partitions & verify all Boot v4 / AVB invariants
+        run: |
+          cd "$HOME/work"
+          OUT_DIR="out/target/product/poplar"
+          ART_DIR="$GITHUB_WORKSPACE/ci-artifacts/lineage-boot-fix"
+          mkdir -p "$ART_DIR" /tmp/alpha_dl
+
+          cp "$OUT_DIR/boot.img" "$OUT_DIR/init_boot.img" "$OUT_DIR/vendor_boot.img" "$ART_DIR/"
+
+          ALPHA_TAG="${{ github.event.inputs.alpha_tag || 'lineage-21.0-20261127-alpha' }}"
+          DL_BASE="https://github.com/BangerSoul/android_device_lenovo_poplar/releases/download/$ALPHA_TAG"
+          for img in odm_dlkm.img product.img system_dlkm.img vendor_dlkm.img; do
+            curl -fsSL "$DL_BASE/$img" -o "/tmp/alpha_dl/$img"
+          done
+
+          AVBTOOL="out/host/linux-x86/bin/avbtool"
+          UNPACK="out/host/linux-x86/bin/unpack_bootimg"
+          KEY="external/avb/test/data/testkey_rsa4096.pem"
+          "$AVBTOOL" extract_public_key --key "$KEY" --output /tmp/alpha_dl/testkey.avbpubkey
+
+          "$AVBTOOL" make_vbmeta_image \
+            --flags 3 \
+            --padding_size 4096 \
+            --algorithm SHA256_RSA4096 \
+            --key "$KEY" \
+            --chain_partition boot:1:/tmp/alpha_dl/testkey.avbpubkey \
+            --chain_partition vbmeta_system:2:/tmp/alpha_dl/testkey.avbpubkey \
+            --chain_partition vbmeta_vendor:3:/tmp/alpha_dl/testkey.avbpubkey \
+            --include_descriptors_from_image "$ART_DIR/init_boot.img" \
+            --include_descriptors_from_image "$ART_DIR/vendor_boot.img" \
+            --include_descriptors_from_image /tmp/alpha_dl/odm_dlkm.img \
+            --include_descriptors_from_image /tmp/alpha_dl/product.img \
+            --include_descriptors_from_image /tmp/alpha_dl/system_dlkm.img \
+            --include_descriptors_from_image /tmp/alpha_dl/vendor_dlkm.img \
+            --output "$ART_DIR/vbmeta.img"
+
+          {
+            echo "=== boot.img info & AVB verify ==="
+            "$AVBTOOL" info_image --image "$ART_DIR/boot.img"
+            "$AVBTOOL" verify_image --image "$ART_DIR/boot.img"
+            echo ""
+            echo "=== init_boot.img unpack & AVB ==="
+            "$UNPACK" --boot_img "$ART_DIR/init_boot.img" --out /tmp/alpha_dl/up_init
+            "$AVBTOOL" info_image --image "$ART_DIR/init_boot.img"
+            "$AVBTOOL" verify_image --image "$ART_DIR/init_boot.img"
+            echo ""
+            echo "=== vendor_boot.img unpack & AVB ==="
+            "$UNPACK" --boot_img "$ART_DIR/vendor_boot.img" --out /tmp/alpha_dl/up_vboot
+            "$AVBTOOL" info_image --image "$ART_DIR/vendor_boot.img"
+            "$AVBTOOL" verify_image --image "$ART_DIR/vendor_boot.img"
+            echo ""
+            echo "=== vbmeta.img info ==="
+            "$AVBTOOL" info_image --image "$ART_DIR/vbmeta.img"
+          } | tee "$ART_DIR/verify_report.txt"
+
+          test "$(stat -c %s "$ART_DIR/boot.img")" -eq 33554432
+          test "$(stat -c %s "$ART_DIR/init_boot.img")" -eq 8388608
+          test "$(stat -c %s "$ART_DIR/vendor_boot.img")" -eq 67108864
+          grep -qE '^Original image size:[[:space:]]+14561280 bytes' "$ART_DIR/verify_report.txt"
+          grep -qE '^VBMeta offset:[[:space:]]+14561280$' "$ART_DIR/verify_report.txt"
+          grep -qE '^boot image header version: 4$' "$ART_DIR/verify_report.txt"
+          grep -qE '^dtb size: 147560$' "$ART_DIR/verify_report.txt"
+          grep -qE 'name: recovery$' "$ART_DIR/verify_report.txt"
+
+          (cd "$ART_DIR" && sha256sum boot.img init_boot.img vendor_boot.img vbmeta.img > SHA256SUMS.txt)
+          cat "$ART_DIR/SHA256SUMS.txt"
+          rm -rf /tmp/alpha_dl
+
+      - name: Upload fixed boot artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: poplar-lineage-21.0-boot-fix-${{ github.sha }}
+          path: ci-artifacts/lineage-boot-fix/
+          if-no-files-found: error
