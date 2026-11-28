@@ -9,4 +9,8 @@ RECOVERY_VARIANT ?= aosp
 
 $(call inherit-product, device/lenovo/poplar/poplar_recovery_base.mk)
 
+# Pure AOSP lacks vendor/*/build/tasks/kernel.mk; stage prebuilt GKI kernel as $(PRODUCT_OUT)/kernel.
+PRODUCT_COPY_FILES += \
+    device/lenovo/poplar/prebuilt/Image.gz:kernel
+
 PRODUCT_NAME := aosp_poplar
