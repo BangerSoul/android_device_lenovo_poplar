@@ -1,15 +1,5 @@
 name: Build Recovery (TWRP / OrangeFox / AOSP)
 
-# ── Blacksmith Free-Tier Rules ─────────────────────────────────────────────────
-# Free tier: 3,000 min/month (2-vCPU equivalent).
-# Runner: blacksmith-4vcpu-ubuntu-2404 (counts as 2× standard minutes).
-# Budget: 3 jobs × ~90 min × 2× = ~540 credited min per full "all" run → ~5 runs/month free.
-# Rules enforced below:
-#   1. timeout-minutes: 120 — hard-kills any job that hangs, capping waste.
-#   2. concurrency cancel-in-progress — only one run per branch/variant live at a time.
-#   3. Manual dispatch only on push (paths filter) + workflow_dispatch — no cron spam.
-#   4. fail-fast: false — sibling jobs still upload partial artifacts on failure.
-# ──────────────────────────────────────────────────────────────────────────────
 
 on:
   workflow_dispatch:
@@ -58,7 +48,6 @@ on:
       - "recovery/**"
       - ".github/workflows/build-recovery.yml"
 
-# ── Free-Tier Rule #2: cancel any in-progress run for same branch/variant ─────
 concurrency:
   group: recovery-${{ github.ref }}-${{ github.event.inputs.variant || 'all' }}
   cancel-in-progress: true
@@ -66,12 +55,7 @@ concurrency:
 jobs:
   build:
     name: Build (${{ matrix.variant }})
-    # ── Free-Tier Rule #1: Blacksmith 4-vCPU runner (uses 2× minute credits) ──
-    # 3,000 free min/month ÷ 2× = 1,500 effective min.
-    # Switch to blacksmith-8vcpu-ubuntu-2404 on paid tier for 2× build speed.
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    # ── Free-Tier Rule #3: hard timeout — no runaway job burns your budget ─────
-    timeout-minutes: 120
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
