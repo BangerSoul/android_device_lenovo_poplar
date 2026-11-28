@@ -1,5 +1,22 @@
 name: Build Recovery (TWRP / OrangeFox / AOSP)
 
+# ── Namespace Free-Trial / Budget Rules ────────────────────────────────────────
+# Plan: Namespace Developer (30-day free trial, no credit card; $0.0015/unit-min
+#       after trial, or apply for free OSS runners at https://namespace.so/opensource).
+# Trial limits:
+#   • Concurrency: 32 vCPU / 64 GB RAM across all active Linux jobs
+#   • Max duration: 180 min (3h) per job; standard shapes only
+#   • Rate: nscloud-ubuntu-22.04-amd64-8x16 = 8 unit-min/min (~$0.008/min post-trial;
+#           same unit-min price as 4x16 with 2× CPUs and 96 GB disk)
+# Rules enforced below:
+#   1. Default runner: 8x16 standard shape + scratch mount for swap (/namespace/scratch).
+#   2. max-parallel: 2 — caps concurrent jobs at 16 vCPU / 32 GB RAM (50% headroom under 32 vCPU cap).
+#   3. timeout-minutes: 120 — hard cap strictly below the 180-min Developer plan ceiling.
+#   4. concurrency: cancel-in-progress — supersedes duplicate runs immediately (0 min for cancelled).
+#   5. Trigger discipline: push limited to recovery/build paths + fail-fast: false.
+#   6. Fallback: workflow_dispatch runner='github-free' switches cleanly back to unlimited
+#      public GitHub ubuntu-22.04 runners after the 30-day trial without editing YAML.
+# ──────────────────────────────────────────────────────────────────────────────
 
 on:
   workflow_dispatch:
@@ -14,6 +31,15 @@ on:
           - twrp
           - orangefox
           - aosp
+      runner:
+        description: "Runner backend (namespace-8x16 trial default, github-free unlimited public fallback)"
+        required: false
+        type: choice
+        default: namespace-8x16
+        options:
+          - namespace-8x16
+          - namespace-4x8
+          - github-free
       twrp_branch:
         description: "minimal-manifest-twrp branch (e.g. twrp-12.1, twrp-14.1)"
         required: false
@@ -55,8 +81,11 @@ concurrency:
 jobs:
   build:
     name: Build (${{ matrix.variant }})
-    runs-on: ubuntu-22.04
+    # ── Free-Trial Rules #1–#3: Namespace 8x16 (16GB RAM, 96GB disk) + scratch swap, max 2 parallel, 120m cap
+    runs-on: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'github-free') && fromJSON('["ubuntu-22.04"]') || ((github.event_name == 'workflow_dispatch' && github.event.inputs.runner == 'namespace-4x8') && fromJSON('["nscloud-ubuntu-22.04-amd64-4x8-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]') || fromJSON('["nscloud-ubuntu-22.04-amd64-8x16-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]')) }}
+    timeout-minutes: 120
     strategy:
+      max-parallel: 2
       fail-fast: false
       matrix:
         variant: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.variant != 'all') && fromJSON(format('["{0}"]', github.event.inputs.variant)) || fromJSON('["twrp", "orangefox", "aosp"]') }}
@@ -72,14 +101,18 @@ jobs:
             imagemagick lib32ncurses5-dev libelf-dev liblz4-tool libncurses5-dev \
             libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush \
             python3 python-is-python3 rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
-          if [ ! -f /ci-swapfile ]; then
-            sudo fallocate -l 16G /ci-swapfile
-            sudo chmod 600 /ci-swapfile
-            sudo mkswap /ci-swapfile
-            sudo swapon /ci-swapfile
+          SWAP_TARGET="/ci-swapfile"
+          if [ -d /namespace/scratch ]; then
+            SWAP_TARGET="/namespace/scratch/swapfile"
+          fi
+          if [ ! -f "$SWAP_TARGET" ]; then
+            sudo fallocate -l 8G "$SWAP_TARGET" || sudo dd if=/dev/zero of="$SWAP_TARGET" bs=1M count=8192 status=none
+            sudo chmod 600 "$SWAP_TARGET"
+            sudo mkswap "$SWAP_TARGET"
+            sudo swapon "$SWAP_TARGET" || echo "WARN: swapon unavailable on this runner; continuing with physical RAM"
           fi
           sudo sysctl -w vm.swappiness=60 || true
-          df -h
+          df -h / /namespace/scratch 2>/dev/null || df -h
           free -h
 
       - name: Install repo tool
