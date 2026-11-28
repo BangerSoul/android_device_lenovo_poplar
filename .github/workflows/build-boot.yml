@@ -252,9 +252,14 @@ jobs:
             done
           ) &
           MON_PID=$!
-          trap 'kill "$MON_PID" 2>/dev/null || true' EXIT
-          nice -n 10 ionice -c 2 -n 7 m -j2 bootimage initbootimage vendorbootimage avbtool unpack_bootimg
+          trap 'pkill -P "$MON_PID" 2>/dev/null || true; kill "$MON_PID" 2>/dev/null || true' EXIT
+          (
+            renice -n 10 "$BASHPID" >/dev/null 2>&1 || true
+            ionice -c 2 -n 7 -p "$BASHPID" >/dev/null 2>&1 || true
+            m -j2 bootimage initbootimage vendorbootimage avbtool unpack_bootimg
+          )
           build_rc=$?
+          pkill -P "$MON_PID" 2>/dev/null || true
           kill "$MON_PID" 2>/dev/null || true
           wait "$MON_PID" 2>/dev/null || true
           trap - EXIT
