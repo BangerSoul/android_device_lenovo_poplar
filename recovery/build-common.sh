@@ -166,13 +166,19 @@ if [[ -n "$setup_script" ]]; then
 fi
 lunch "$lunch_target"
 lunch_rc=$?
-set -euo pipefail
 ((lunch_rc == 0)) || fail "lunch failed for '$lunch_target' (exit $lunch_rc)"
 
+# Keep nounset disabled across m/installclean: AOSP 14 build/envsetup.sh reads
+# optional globals such as ANDROID_BUILD_BANNER without default expansion.
 if [[ "$clean" == true ]]; then
     m installclean
+    build_rc=$?
+    ((build_rc == 0)) || fail "m installclean failed (exit $build_rc)"
 fi
 m -j"$jobs" RECOVERY_VARIANT="$variant" "$build_target"
+build_rc=$?
+set -euo pipefail
+((build_rc == 0)) || fail "m $build_target failed (exit $build_rc)"
 
 out_img="${OUT:-out/target/product/poplar}/vendor_boot.img"
 if [[ -f "$out_img" ]]; then
