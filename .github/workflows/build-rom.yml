@@ -1,20 +1,18 @@
 name: Build LineageOS 21.0 Full ROM (16x32 Pruned)
 
-# ── Namespace 16x32 Full ROM Workflow & Free-Trial Rules ───────────────────────
-# Plan: Namespace Developer trial (`32 vCPU / 64 GB RAM`, `180 min` max job cap).
-# Runner: `16x32 Optimal` (16 vCPU, 32 GB RAM, 160 GB disk; 16 unit-min/min).
-# Disk budget on 160 GB instance (~150 GB usable):
-#   • Pre-sync pruning (`--groups=-darwin,-cts` + `prune-unused.xml`): skips CTS,
-#     emulator/cuttlefish/goldfish, ABI dumps (w/ SKIP_ABI_CHECKS=true), kernel
-#     clang, deqp, and unused QCOM SoC HALs (~14 GB saved before download).
-#   • Post-sync pruning (`rm -rf`): strips `.repo/project-objects`, `.repo/projects`,
-#     `.repo/repo`, `.repo/manifests.git` (~14 GB) + unused Rust (~15 GB) + unused
-#     Clang (~9 GB), leaving ~55 GB source and ~90+ GB free for `out/` + ROM zip.
+# ── Namespace Full ROM Workflow & Verified Trial Limits ────────────────────────
+# Verified on Developer free trial (2026-11-28):
+#   • Developer trial caps each runner at MAX `8x16` (8 vCPU, 16 GB RAM, 96 GB disk).
+#   • `8x32`, `16x32` (160 GB disk), and `32x64` (288 GB disk) are locked under
+#     "Upgrade to unlock" (error: "requesting 16x32, maximum 8x16").
+#   • Full ROM (`m bacon`) needs >= 160 GB disk (16x32 or 32x64) -> apply for free
+#     OSS runners at https://namespace.so/opensource or upgrade to Team/Business.
+#   • Current Developer trial (`8x16`, ~86 GB free) can build `boot-images` cleanly.
 # Rules enforced below:
 #   1. Manual `workflow_dispatch` only — prevents git pushes from burning compute.
 #   2. `timeout-minutes: 170` — stays under Developer's 180-min (3h) ceiling.
 #   3. `concurrency: cancel-in-progress: true` — prevents overlapping ROM runs.
-#   4. Compact 4G scratch swap (since 16x32 already has 32 GB physical RAM).
+#   4. Fail-fast disk guard if `bacon` is paired with `8x16` (96 GB disk).
 #   5. GitHub Pre-Release upload — avoids the 500 MB Actions artifact storage cap.
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -31,21 +29,23 @@ on:
           - eng
           - user
       target:
-        description: "Make target (`bacon` for full flashable ROM zip)"
+        description: "Make target (`bacon` requires 16x32/32x64; `boot-images` fits 8x16 trial)"
         required: true
         type: choice
-        default: bacon
+        default: boot-images
         options:
+          - boot-images
           - bacon
-          - bootimage
       runner:
-        description: "Namespace machine shape (`16x32` = 160GB disk, `32x64` = 288GB disk)"
+        description: "Runner (`8x16` = Developer trial max; `16x32`/`32x64` = Paid/OSS; `github-free` = fallback)"
         required: true
         type: choice
-        default: namespace-16x32
+        default: namespace-8x16
         options:
+          - namespace-8x16
           - namespace-16x32
           - namespace-32x64
+          - github-free
       publish_release:
         description: "Upload built ROM zip & boot images to a GitHub Pre-Release"
         required: false
@@ -61,11 +61,20 @@ concurrency:
 
 jobs:
   build_rom:
-    name: Build ROM (${{ github.event.inputs.target || 'bacon' }} / ${{ github.event.inputs.runner || 'namespace-16x32' }})
-    runs-on: ${{ (github.event.inputs.runner == 'namespace-32x64') && fromJSON('["nscloud-ubuntu-22.04-amd64-32x64-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]') || fromJSON('["nscloud-ubuntu-22.04-amd64-16x32-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]') }}
+    name: Build ROM (${{ github.event.inputs.target || 'boot-images' }} / ${{ github.event.inputs.runner || 'namespace-8x16' }})
+    runs-on: ${{ (github.event.inputs.runner == 'github-free') && fromJSON('["ubuntu-22.04"]') || ((github.event.inputs.runner == 'namespace-32x64') && fromJSON('["nscloud-ubuntu-22.04-amd64-32x64-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]') || ((github.event.inputs.runner == 'namespace-16x32') && fromJSON('["nscloud-ubuntu-22.04-amd64-16x32-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]') || fromJSON('["nscloud-ubuntu-22.04-amd64-8x16-with-features", "namespace-features:container.privileged=true;container.mount-scratch=true"]'))) }}
     timeout-minutes: 170
 
     steps:
+      - name: Check runner/target disk compatibility
+        run: |
+          TARGET="${{ github.event.inputs.target || 'boot-images' }}"
+          RUNNER="${{ github.event.inputs.runner || 'namespace-8x16' }}"
+          if [ "$TARGET" = "bacon" ] && [ "$RUNNER" = "namespace-8x16" ]; then
+            echo "::error::Full ROM target 'bacon' needs >=160 GB disk (namespace-16x32 or namespace-32x64). Namespace Developer free trial caps runners at 8x16 (96 GB disk); unlock 16x32/32x64 via https://namespace.so/opensource or Team plan."
+            exit 1
+          fi
+
       - name: Maximize disk space, install deps & setup 4G scratch swap
         run: |
           sudo rm -rf \
@@ -227,14 +236,19 @@ jobs:
             https://github.com/LineageOS/android_device_mediatek_sepolicy_vndr.git \
             "$WORK/device/mediatek/sepolicy_vndr"
 
-      - name: Build LineageOS 21.0 (${{ github.event.inputs.target || 'bacon' }})
+      - name: Build LineageOS 21.0 (${{ github.event.inputs.target || 'boot-images' }})
         run: |
           cd "$HOME/work"
           export LC_ALL=C
           export SKIP_ABI_CHECKS=true
           export GOGC=50
           LUNCH_VARIANT="${{ github.event.inputs.lunch_variant || 'userdebug' }}"
-          BUILD_TARGET="${{ github.event.inputs.target || 'bacon' }}"
+          BUILD_INPUT="${{ github.event.inputs.target || 'boot-images' }}"
+          if [ "$BUILD_INPUT" = "bacon" ]; then
+            BUILD_TARGETS="bacon"
+          else
+            BUILD_TARGETS="bootimage initbootimage vendorbootimage avbtool unpack_bootimg"
+          fi
 
           set +e +u
           set +o pipefail
@@ -259,7 +273,8 @@ jobs:
           # Apply priority to current shell so bash function `m` runs directly
           renice -n 10 -p $$ >/dev/null 2>&1 || true
           ionice -c 2 -n 7 -p $$ >/dev/null 2>&1 || true
-          m -j"$(nproc)" "$BUILD_TARGET"
+          # shellcheck disable=SC2086
+          m -j"$(nproc)" $BUILD_TARGETS
           build_rc=$?
 
           kill "$MON_PID" 2>/dev/null || true
@@ -301,7 +316,7 @@ jobs:
           fi
 
           ROM_ZIP=$(ls -1 "$OUT_DIR"/lineage-*.zip 2>/dev/null | head -n 1 || true)
-          if [ "${{ github.event.inputs.target || 'bacon' }}" = "bacon" ]; then
+          if [ "${{ github.event.inputs.target || 'boot-images' }}" = "bacon" ]; then
             test -n "$ROM_ZIP"
             cp "$ROM_ZIP" "$REL_DIR/"
             [ -f "${ROM_ZIP}.sha256sum" ] && cp "${ROM_ZIP}.sha256sum" "$REL_DIR/"
@@ -311,8 +326,8 @@ jobs:
           ls -lh "$REL_DIR"
           {
             echo "## LineageOS 21.0 ROM Build Summary"
-            echo "- Runner: \`${{ github.event.inputs.runner || 'namespace-16x32' }}\`"
-            echo "- Target: \`${{ github.event.inputs.target || 'bacon' }}\` (\`${{ github.event.inputs.lunch_variant || 'userdebug' }}\`)"
+            echo "- Runner: \`${{ github.event.inputs.runner || 'namespace-8x16' }}\`"
+            echo "- Target: \`${{ github.event.inputs.target || 'boot-images' }}\` (\`${{ github.event.inputs.lunch_variant || 'userdebug' }}\`)"
             echo '```'
             cat "$REL_DIR/SHA256SUMS.txt"
             echo '```'
